@@ -1,1 +1,10 @@
 target
+# Default ignored files
+/shelf/
+/workspace.xml
+
+# IntelliJ stuff
+/.idea
+
+# Ignore GBA files
+*.gba
