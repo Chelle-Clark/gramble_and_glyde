@@ -53,20 +53,17 @@ impl<'tile> Tilemap<'tile> {
   pub fn get_collision_seams(&self, movement: Vector2D<PosNum>, hitbox: Rect<PosNum>) -> Collision {
     let px_per_tile = PosNum::new(16);
     let entered_x = {
-      if movement.x > PosNum::new(0) {
-        let cur_right = hitbox.position.x + hitbox.size.x;
-        if cur_right / 16 != (cur_right + movement.x) / 16 {
-          Some((cur_right + movement.x) / 16)
+      let cur_edge = {
+        if movement.x > PosNum::new(0) {
+          hitbox.position.x + hitbox.size.x - PosNum::from_raw(1)
         } else {
-          None
+          hitbox.position.x
         }
+      };
+      if (cur_edge / px_per_tile).floor() != ((cur_edge + movement.x) / px_per_tile).floor() {
+        Some(((cur_edge + movement.x) / px_per_tile).floor())
       } else {
-        let cur_left = hitbox.position.x;
-        if cur_left / 16 != (cur_left + movement.x) / 16 {
-          Some((cur_left + movement.x) / 16)
-        } else {
-          None
-        }
+        None
       }
     };
     let entered_y = {
@@ -90,8 +87,8 @@ impl<'tile> Tilemap<'tile> {
         if entered_y >= 0 && entered_y < self.height as i32 {
           let tilemap_entered_y = entered_y as usize;
           let (tile_left_x, tile_right_x) = {
-            let left_x = hitbox.position.x + movement.x;
-            let right_x = left_x + hitbox.size.x;
+            let left_x = hitbox.position.x;
+            let right_x = left_x + hitbox.size.x - PosNum::from_raw(1);
             ((left_x / px_per_tile).floor(), (right_x / px_per_tile).floor())
           };
           let mut result = None;
@@ -115,9 +112,39 @@ impl<'tile> Tilemap<'tile> {
         None
       }
     };
+    let x_seam = {
+      if let Some(entered_x) = entered_x {
+        if entered_x >= 0 && entered_x < self.width as i32 {
+          let tilemap_entered_x = entered_x as usize;
+          let (tile_up_y, tile_down_y) = {
+            let up_y = hitbox.position.y;
+            let down_y = up_y + hitbox.size.y - PosNum::from_raw(1);
+            ((up_y / px_per_tile).floor(), (down_y / px_per_tile).floor())
+          };
+          let mut result = None;
+          for i in tile_up_y..=tile_down_y {
+            if i >= 0 && i < self.height as i32 && self.data[tilemap_entered_x + i as usize * self.width] != 0 {
+              let left_x = {
+                if movement.x < PosNum::new(0) {
+                  entered_x + 1
+                } else {
+                  entered_x
+                }
+              };
+              result = Some(left_x * 16);
+            }
+          }
+          result
+        } else {
+          None
+        }
+      } else {
+        None
+      }
+    };
 
     return Collision {
-      x_seam: None,
+      x_seam,
       y_seam,
     }
   }
