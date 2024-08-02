@@ -12,10 +12,22 @@ use agb::{
         object::{Graphics, OamManaged, Object, Tag},
         tiled::{RegularBackgroundSize, TileFormat, TiledMap},
     },
+    fixnum::{Vector2D, Rect},
 };
-use crate::player::Player;
+use crate::player::{Player, PosNum};
 
 agb::include_background_gfx!(tile_test, "333333", background => deduplicate "gfx/tile_test.png");
+
+fn move_and_collide(movement: Vector2D<PosNum>, hitbox: Rect<PosNum>) -> Vector2D<PosNum> {
+    let bottom_y = hitbox.position.y + hitbox.size.y + movement.y;
+    let floor = 120.into();
+    let mut actual = movement.clone();
+    if bottom_y > floor {
+        actual.y = movement.y - (bottom_y - floor);
+    }
+
+    actual
+}
 
 #[agb::entry]
 fn main(mut gba: agb::Gba) -> ! {
@@ -63,7 +75,8 @@ fn main(mut gba: agb::Gba) -> ! {
     object.commit();
 
     loop {
-        glyde.frame(&input);
+        let player_movement = glyde.propose_movement(&input);
+        glyde.move_by(move_and_collide(player_movement, glyde.col_rect()));
 
         vblank.wait_for_vblank();
         input.update();

@@ -1,10 +1,10 @@
 use agb::{
   display::object::{Object, OamManaged, Graphics, Tag},
-  fixnum::{Vector2D, Num, num},
+  fixnum::{Vector2D, Rect, Num, num},
   input::{ButtonController, Button, Tri},
 };
 
-type PosNum = Num<i32, 8>;
+pub type PosNum = Num<i32, 8>;
 
 static GLYDE: &Graphics = agb::include_aseprite!("gfx/glyde.aseprite");
 static GLYDE_IDLE: &Tag = GLYDE.tags().get("Idle");
@@ -30,7 +30,7 @@ impl<'obj> Player<'obj> {
     player
   }
 
-  pub fn frame(&mut self, input: &ButtonController) {
+  pub fn propose_movement(&mut self, input: &ButtonController) -> Vector2D<PosNum> {
     let acceleration: PosNum = num!(0.2);
     let max_velocity: PosNum = num!(2.5);
     let gravity: PosNum = num!(0.3);
@@ -50,11 +50,11 @@ impl<'obj> Player<'obj> {
         vel.x += acceleration;
         vel.x = vel.x.clamp(-max_velocity, desired_x_vel);
       }
-      if vel.x.abs() < 1.into() {
+      if vel.x.abs() < num!(0.5) {
         match tri {
           Tri::Zero => vel.x = 0.into(),
-          Tri::Positive => vel.x = 1.into(),
-          Tri::Negative => vel.x = (-1).into(),
+          Tri::Positive => vel.x = num!(0.5),
+          Tri::Negative => vel.x = num!(-0.5),
         }
       }
 
@@ -66,7 +66,7 @@ impl<'obj> Player<'obj> {
       vel
     };
 
-    self.move_by(self.velocity);
+    self.velocity
   }
 
   pub fn move_by(&mut self, offset: Vector2D<PosNum>) {
@@ -75,7 +75,10 @@ impl<'obj> Player<'obj> {
 
   pub fn set_position(&mut self, position: Vector2D<PosNum>) {
     self.position = position;
-    self.position.y = self.position.y.clamp(0.into(), (120 - 32).into());
     self.sprite.set_position(self.position.trunc());
+  }
+
+  pub fn col_rect(&self) -> Rect<PosNum> {
+    Rect::new(self.position, (32, 32).into())
   }
 }
