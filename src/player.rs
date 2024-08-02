@@ -33,7 +33,7 @@ impl<'obj> Player<'obj> {
   pub fn propose_movement(&mut self, input: &ButtonController) -> Vector2D<PosNum> {
     let acceleration: PosNum = num!(0.2);
     let max_velocity: PosNum = num!(2.5);
-    let gravity: PosNum = num!(0.3);
+    let gravity: PosNum = num!(0.1);
     let jump_impulse: PosNum = {
       let max_height: PosNum = 19.into();
       (PosNum::new(2) * gravity * max_height).sqrt()
@@ -63,6 +63,9 @@ impl<'obj> Player<'obj> {
         vel.y = -jump_impulse;
       }
 
+      let tile_size = PosNum::new(16);
+      vel.x = vel.x.clamp(-tile_size, tile_size);
+      vel.y = vel.y.clamp(-tile_size, tile_size);
       vel
     };
 
@@ -70,6 +73,7 @@ impl<'obj> Player<'obj> {
   }
 
   pub fn move_by(&mut self, offset: Vector2D<PosNum>) {
+    self.velocity = offset;
     self.set_position(self.position + offset);
   }
 
