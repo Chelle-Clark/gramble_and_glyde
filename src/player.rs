@@ -59,7 +59,7 @@ impl<'obj> Player<'obj> {
       }
 
       vel.y += gravity;
-      if input.is_just_pressed(Button::A) {
+      if input.is_just_pressed(Button::B) {
         vel.y = -jump_impulse;
       }
 
@@ -67,6 +67,12 @@ impl<'obj> Player<'obj> {
       vel.x = vel.x.clamp(-tile_size, tile_size);
       vel.y = vel.y.clamp(-tile_size, tile_size);
       vel
+    };
+
+    match tri {
+      Tri::Negative => { self.sprite.set_hflip(true); },
+      Tri::Positive => { self.sprite.set_hflip(false); },
+      _ => {}
     };
 
     self.velocity
@@ -83,6 +89,6 @@ impl<'obj> Player<'obj> {
   }
 
   pub fn col_rect(&self) -> Rect<PosNum> {
-    Rect::new(self.position, (32, 32).into())
+    Rect::new(self.position + Vector2D::new(4, 4).into(), (24, 28).into())
   }
 }
