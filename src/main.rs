@@ -91,6 +91,9 @@ fn main(mut gba: agb::Gba) -> ! {
             playing_gramble = !playing_gramble;
         }
 
+        gramble.draw(&object);
+        glyde.draw(&object);
+
         vblank.wait_for_vblank();
         input.update();
         object.commit();

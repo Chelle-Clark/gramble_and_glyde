@@ -8,6 +8,7 @@ edition = "2021"
 
 [dependencies]
 agb = "0.20.5"
+agb-ext = { path = "agb-ext" }
 
 [profile.dev]
 opt-level = 3

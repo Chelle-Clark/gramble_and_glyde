@@ -1,18 +1,58 @@
 use agb::{
-  display::object::{Object, OamManaged, Graphics, Tag},
+  display::object::{Object, OamManaged},
   fixnum::{Vector2D, Rect, Num, num},
   input::{ButtonController, Button, Tri},
 };
+use agb_ext::anim::AnimPlayer;
 
 pub type PosNum = Num<i32, 8>;
 
 const ZERO: PosNum = PosNum::from_raw(0);
 
-static GRAMBLE: &Graphics = agb::include_aseprite!("gfx/gramble.aseprite");
-static GRAMBLE_IDLE: &Tag = GRAMBLE.tags().get("Idle");
+#[derive(Copy, Clone)]
+enum AnimEnum {
+  Idle,
+}
 
-static GLYDE: &Graphics = agb::include_aseprite!("gfx/glyde.aseprite");
-static GLYDE_IDLE: &Tag = GLYDE.tags().get("Idle");
+mod gramble_sprites {
+  use agb::{
+    display::object::{Graphics, Tag},
+  };
+  use agb_ext::{
+    anim::Anim,
+    new_anim,
+  };
+  use super::AnimEnum;
+
+  static GRAPHICS: &Graphics = agb::include_aseprite!("gfx/gramble.aseprite");
+  static IDLE: &Tag = GRAPHICS.tags().get("Idle");
+
+  pub fn get_next_anim(anim_enum: AnimEnum) -> Anim<AnimEnum> {
+    match (anim_enum) {
+      AnimEnum::Idle => new_anim!(IDLE, Some(AnimEnum::Idle), (0, 60)),
+    }
+  }
+}
+
+mod glyde_sprites {
+  use agb::{
+    display::object::{Graphics, Tag},
+  };
+  use agb_ext::{
+    anim::Anim,
+    new_anim,
+  };
+  use super::AnimEnum;
+
+  static GRAPHICS: &Graphics = agb::include_aseprite!("gfx/glyde.aseprite");
+  static IDLE: &Tag = GRAPHICS.tags().get("Idle");
+
+  pub fn get_next_anim(anim_enum: AnimEnum) -> Anim<AnimEnum> {
+    match (anim_enum) {
+      AnimEnum::Idle => new_anim!(IDLE, Some(AnimEnum::Idle), (0, 90), (1, 6), (2, 6), (3, 6))
+    }
+  }
+}
 
 enum PlayerType {
   Gramble,
@@ -20,7 +60,7 @@ enum PlayerType {
 }
 
 pub struct Player<'obj> {
-  sprite: Object<'obj>,
+  anim: AnimPlayer<'obj, AnimEnum>,
   position: Vector2D<PosNum>,
   velocity: Vector2D<PosNum>,
 
@@ -31,19 +71,24 @@ pub struct Player<'obj> {
 
 impl<'obj> Player<'obj> {
   pub fn gramble(object: &'obj OamManaged, position: Vector2D<PosNum>) -> Player<'obj> {
-    Self::new(object, position, GRAMBLE_IDLE, Rect::new((1, 4).into(), (14, 28).into()), PlayerType::Gramble)
+    Self::new(
+      AnimPlayer::new(object, gramble_sprites::get_next_anim, AnimEnum::Idle),
+      position,
+      Rect::new((1, 4).into(), (14, 28).into()),
+      PlayerType::Gramble)
   }
 
   pub fn glyde(object: &'obj OamManaged, position: Vector2D<PosNum>) -> Player<'obj> {
-    Self::new(object, position, GLYDE_IDLE, Rect::new((4, 4).into(), (24, 28).into()), PlayerType::Glyde)
+    Self::new(
+      AnimPlayer::new(object, glyde_sprites::get_next_anim, AnimEnum::Idle),
+      position,
+      Rect::new((4, 4).into(), (24, 28).into()),
+      PlayerType::Glyde)
   }
 
-  fn new(object: &'obj OamManaged, position: Vector2D<PosNum>, tag: &Tag, col_rect: Rect<PosNum>, player_type: PlayerType) -> Player<'obj> {
-    let mut sprite = object.object_sprite(tag.sprite(0));
-    sprite.show();
-
+  fn new(anim: AnimPlayer<'obj, AnimEnum>, position: Vector2D<PosNum>, col_rect: Rect<PosNum>, player_type: PlayerType) -> Player<'obj> {
     let mut player = Player {
-      sprite,
+      anim,
       position: (0, 0).into(),
       velocity: (0, 0).into(),
       col_rect,
@@ -103,12 +148,16 @@ impl<'obj> Player<'obj> {
     };
 
     match tri {
-      Tri::Negative => { self.sprite.set_hflip(true); },
-      Tri::Positive => { self.sprite.set_hflip(false); },
+      Tri::Negative => { self.sprite().set_hflip(true); },
+      Tri::Positive => { self.sprite().set_hflip(false); },
       _ => {}
     };
 
     self.velocity
+  }
+
+  pub fn draw(&mut self, object: &'obj OamManaged) {
+    self.anim.draw(object);
   }
 
   pub fn move_by(&mut self, offset: Vector2D<PosNum>) {
@@ -119,10 +168,15 @@ impl<'obj> Player<'obj> {
 
   pub fn set_position(&mut self, position: Vector2D<PosNum>) {
     self.position = position;
-    self.sprite.set_position(self.position.trunc());
+    let sprite_position = self.position.trunc();
+    self.sprite().set_position(sprite_position);
   }
 
   pub fn col_rect(&self) -> Rect<PosNum> {
     Rect::new(self.position + self.col_rect.position, self.col_rect.size)
+  }
+
+  fn sprite(&mut self) -> &mut Object<'obj> {
+    self.anim.sprite_mut()
   }
 }

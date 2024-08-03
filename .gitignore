@@ -1,4 +1,5 @@
 target
+Cargo.lock
 # Default ignored files
 /shelf/
 /workspace.xml
