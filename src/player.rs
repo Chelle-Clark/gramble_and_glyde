@@ -6,6 +6,8 @@ use agb::{
 
 pub type PosNum = Num<i32, 8>;
 
+const ZERO: PosNum = PosNum::from_raw(0);
+
 static GRAMBLE: &Graphics = agb::include_aseprite!("gfx/gramble.aseprite");
 static GRAMBLE_IDLE: &Tag = GRAMBLE.tags().get("Idle");
 
@@ -21,8 +23,10 @@ pub struct Player<'obj> {
   sprite: Object<'obj>,
   position: Vector2D<PosNum>,
   velocity: Vector2D<PosNum>,
+
   col_rect: Rect<PosNum>,
   player_type: PlayerType,
+  on_ground: bool,
 }
 
 impl<'obj> Player<'obj> {
@@ -44,6 +48,7 @@ impl<'obj> Player<'obj> {
       velocity: (0, 0).into(),
       col_rect,
       player_type,
+      on_ground: false,
     };
     player.set_position(position);
 
@@ -85,8 +90,10 @@ impl<'obj> Player<'obj> {
       }
 
       vel.y += gravity;
-      if input.is_just_pressed(Button::B) {
+      if input.is_just_pressed(Button::B) && self.on_ground {
         vel.y = -jump_impulse;
+      } else if input.is_released(Button::B) {
+        vel.y += gravity * num!(0.75);
       }
 
       let tile_size = PosNum::new(16);
@@ -105,6 +112,7 @@ impl<'obj> Player<'obj> {
   }
 
   pub fn move_by(&mut self, offset: Vector2D<PosNum>) {
+    self.on_ground = self.velocity.y > ZERO && offset.y == ZERO;
     self.velocity = offset;
     self.set_position(self.position + offset);
   }
