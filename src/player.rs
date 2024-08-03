@@ -6,24 +6,44 @@ use agb::{
 
 pub type PosNum = Num<i32, 8>;
 
+static GRAMBLE: &Graphics = agb::include_aseprite!("gfx/gramble.aseprite");
+static GRAMBLE_IDLE: &Tag = GRAMBLE.tags().get("Idle");
+
 static GLYDE: &Graphics = agb::include_aseprite!("gfx/glyde.aseprite");
 static GLYDE_IDLE: &Tag = GLYDE.tags().get("Idle");
+
+enum PlayerType {
+  Gramble,
+  Glyde,
+}
 
 pub struct Player<'obj> {
   sprite: Object<'obj>,
   position: Vector2D<PosNum>,
   velocity: Vector2D<PosNum>,
+  col_rect: Rect<PosNum>,
+  player_type: PlayerType,
 }
 
 impl<'obj> Player<'obj> {
-  pub fn new(object: &'obj OamManaged, position: Vector2D<PosNum>) -> Player<'obj> {
-    let mut sprite = object.object_sprite(GLYDE_IDLE.sprite(0));
+  pub fn gramble(object: &'obj OamManaged, position: Vector2D<PosNum>) -> Player<'obj> {
+    Self::new(object, position, GRAMBLE_IDLE, Rect::new((1, 4).into(), (14, 28).into()), PlayerType::Gramble)
+  }
+
+  pub fn glyde(object: &'obj OamManaged, position: Vector2D<PosNum>) -> Player<'obj> {
+    Self::new(object, position, GLYDE_IDLE, Rect::new((4, 4).into(), (24, 28).into()), PlayerType::Glyde)
+  }
+
+  fn new(object: &'obj OamManaged, position: Vector2D<PosNum>, tag: &Tag, col_rect: Rect<PosNum>, player_type: PlayerType) -> Player<'obj> {
+    let mut sprite = object.object_sprite(tag.sprite(0));
     sprite.show();
 
     let mut player = Player {
       sprite,
       position: (0, 0).into(),
       velocity: (0, 0).into(),
+      col_rect,
+      player_type,
     };
     player.set_position(position);
 
@@ -32,10 +52,16 @@ impl<'obj> Player<'obj> {
 
   pub fn propose_movement(&mut self, input: &ButtonController) -> Vector2D<PosNum> {
     let acceleration: PosNum = num!(0.2);
-    let max_velocity: PosNum = num!(2.5);
+    let max_velocity: PosNum = match self.player_type {
+      PlayerType::Gramble => num!(3.0),
+      PlayerType::Glyde => num!(2.5),
+    };
     let gravity: PosNum = num!(0.1);
     let jump_impulse: PosNum = {
-      let max_height: PosNum = 19.into();
+      let max_height: PosNum = match self.player_type {
+        PlayerType::Gramble => 35,
+        PlayerType::Glyde => 19,
+      }.into();
       (PosNum::new(2) * gravity * max_height).sqrt()
     };
 
@@ -89,6 +115,6 @@ impl<'obj> Player<'obj> {
   }
 
   pub fn col_rect(&self) -> Rect<PosNum> {
-    Rect::new(self.position + Vector2D::new(4, 4).into(), (24, 28).into())
+    Rect::new(self.position + self.col_rect.position, self.col_rect.size)
   }
 }

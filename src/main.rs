@@ -14,6 +14,7 @@ use agb::{
         tiled::{RegularBackgroundSize, TileFormat, TiledMap},
     },
     fixnum::{Vector2D, Rect},
+    input::Button,
 };
 use crate::tiles::Tilemap;
 use crate::player::{Player, PosNum};
@@ -58,7 +59,9 @@ fn main(mut gba: agb::Gba) -> ! {
     let mut input = agb::input::ButtonController::new();
     let vblank = agb::interrupt::VBlank::get();
 
-    let mut glyde = Player::new(&object, (16, 64).into());
+    let mut gramble = Player::gramble(&object, (48, 96).into());
+    let mut glyde = Player::glyde(&object, (16, 96).into());
+    let mut playing_gramble = false;
 
     let tilemap = Tilemap::new(&[
         0_u8, 0_u8, 0_u8, 0_u8, 0_u8, 0_u8, 0_u8, 0_u8, 0_u8, 0_u8, 0_u8, 0_u8, 0_u8, 0_u8, 0_u8,
@@ -78,8 +81,15 @@ fn main(mut gba: agb::Gba) -> ! {
     object.commit();
 
     loop {
-        let player_movement = glyde.propose_movement(&input);
-        glyde.move_by(move_and_collide(player_movement, glyde.col_rect(), &tilemap));
+        let player = {
+            if playing_gramble { &mut gramble } else { &mut glyde }
+        };
+        let player_movement = player.propose_movement(&input);
+        player.move_by(move_and_collide(player_movement, player.col_rect(), &tilemap));
+
+        if input.is_just_pressed(Button::L) {
+            playing_gramble = !playing_gramble;
+        }
 
         vblank.wait_for_vblank();
         input.update();
