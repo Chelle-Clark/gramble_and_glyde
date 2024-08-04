@@ -5,7 +5,6 @@
 #![cfg_attr(test, test_runner(agb::test_runner::test_runner))]
 
 mod player;
-mod tiles;
 
 use agb::{
     display::{
@@ -16,8 +15,18 @@ use agb::{
     fixnum::{Vector2D, Rect},
     input::Button,
 };
-use crate::tiles::Tilemap;
-use crate::player::{Player, PosNum};
+use agb_ext::{
+    tiles::{Tilemap, TileSetData},
+    math::PosNum,
+};
+use crate::player::Player;
+
+agb::include_background_gfx!(tileset, "333333", background => deduplicate "gfx/tile_test.png");
+
+const METATILES: &[[usize; 4]] = &[
+    [0, 0, 1, 1],
+    [1, 1, 1, 1],
+];
 
 fn move_and_collide(movement: Vector2D<PosNum>, hitbox: Rect<PosNum>, tilemap: &Tilemap) -> Vector2D<PosNum> {
     let tile_collisions = tilemap.get_collision_seams(movement, hitbox);
@@ -74,7 +83,11 @@ fn main(mut gba: agb::Gba) -> ! {
         0_u8, 0_u8, 0_u8, 0_u8, 0_u8, 0_u8, 1_u8, 2_u8, 2_u8, 0_u8, 0_u8, 0_u8, 0_u8, 0_u8, 1_u8,
         1_u8, 1_u8, 1_u8, 1_u8, 1_u8, 1_u8, 2_u8, 2_u8, 2_u8, 1_u8, 1_u8, 1_u8, 1_u8, 1_u8, 2_u8,
         0_u8, 0_u8, 0_u8, 0_u8, 0_u8, 0_u8, 0_u8, 0_u8, 0_u8, 0_u8, 0_u8, 0_u8, 0_u8, 0_u8, 0_u8,
-    ], 15);
+    ], 15, TileSetData{
+        metatiles: &METATILES,
+        palettes: tileset::PALETTES,
+        tile_data: &tileset::background,
+    });
     tilemap.draw_background(&mut background, &mut vram);
     background.commit(&mut vram);
     background.set_visible(true);

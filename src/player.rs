@@ -3,11 +3,10 @@ use agb::{
   fixnum::{Vector2D, Rect, Num, num},
   input::{ButtonController, Button, Tri},
 };
-use agb_ext::anim::AnimPlayer;
-
-pub type PosNum = Num<i32, 8>;
-
-const ZERO: PosNum = PosNum::from_raw(0);
+use agb_ext::{
+  math::{PosNum, ZERO},
+  anim::AnimPlayer
+};
 
 #[derive(Copy, Clone)]
 enum AnimEnum {
