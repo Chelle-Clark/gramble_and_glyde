@@ -99,7 +99,7 @@ impl<'obj> Player<'obj> {
     player
   }
 
-  pub fn propose_movement(&mut self, input: &ButtonController) -> Vector2D<PosNum> {
+  pub fn propose_movement(&mut self, input: Option<&ButtonController>) -> Vector2D<PosNum> {
     let acceleration: PosNum = num!(0.2);
     let max_velocity: PosNum = match self.player_type {
       PlayerType::Gramble => num!(3.0),
@@ -114,7 +114,13 @@ impl<'obj> Player<'obj> {
       (PosNum::new(2) * gravity * max_height).sqrt()
     };
 
-    let tri = input.x_tri();
+    let tri = {
+      if let Some(input) = input {
+        input.x_tri()
+      } else {
+        Tri::Zero
+      }
+    };
     let desired_x_vel = PosNum::new(tri as i32) * max_velocity;
     self.velocity = {
       let mut vel = self.velocity.clone();
@@ -134,10 +140,12 @@ impl<'obj> Player<'obj> {
       }
 
       vel.y += gravity;
-      if input.is_just_pressed(Button::B) && self.on_ground {
-        vel.y = -jump_impulse;
-      } else if input.is_released(Button::B) {
-        vel.y += gravity * num!(0.75);
+      if let Some(input) = input {
+        if input.is_just_pressed(Button::B) && self.on_ground {
+          vel.y = -jump_impulse;
+        } else if input.is_released(Button::B) {
+          vel.y += gravity * num!(0.75);
+        }
       }
 
       let tile_size = PosNum::new(16);

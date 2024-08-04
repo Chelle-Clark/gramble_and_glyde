@@ -13,7 +13,7 @@ use agb::{
         tiled::{RegularBackgroundSize, TileFormat, TiledMap},
     },
     fixnum::{Vector2D, Rect},
-    input::Button,
+    input::{Button, ButtonController},
 };
 use agb_ext::{
     tiles::{Tilemap, TileSetData},
@@ -55,6 +55,11 @@ fn move_and_collide(movement: Vector2D<PosNum>, hitbox: Rect<PosNum>, tilemap: &
     actual
 }
 
+fn physics_process(player: &mut Player, tilemap: &Tilemap, input: Option<&ButtonController>) {
+    let player_movement = player.propose_movement(input);
+    player.move_by(move_and_collide(player_movement, player.col_rect(), tilemap));
+}
+
 #[agb::entry]
 fn main(mut gba: agb::Gba) -> ! {
     let (tiled0, mut vram) = gba.display.video.tiled0();
@@ -94,11 +99,8 @@ fn main(mut gba: agb::Gba) -> ! {
     object.commit();
 
     loop {
-        let player = {
-            if playing_gramble { &mut gramble } else { &mut glyde }
-        };
-        let player_movement = player.propose_movement(&input);
-        player.move_by(move_and_collide(player_movement, player.col_rect(), &tilemap));
+        physics_process(&mut gramble, &tilemap, if playing_gramble {Some(&input)} else {None});
+        physics_process(&mut glyde, &tilemap, if !playing_gramble {Some(&input)} else {None});
 
         if input.is_just_pressed(Button::L) {
             playing_gramble = !playing_gramble;
