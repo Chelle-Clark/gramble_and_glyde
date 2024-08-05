@@ -99,6 +99,10 @@ impl<'obj> Player<'obj> {
     player
   }
 
+  pub fn hide_sprite(&mut self) {
+    self.sprite().hide();
+  }
+
   pub fn propose_movement(&mut self, input: Option<&ButtonController>) -> Vector2D<PosNum> {
     let acceleration: PosNum = num!(0.2);
     let max_velocity: PosNum = match self.player_type {

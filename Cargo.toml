@@ -10,6 +10,9 @@ edition = "2021"
 agb = "0.20.5"
 agb-ext = { path = "agb-ext" }
 
+[build-dependencies]
+tiled = "0.12.0"
+
 [profile.dev]
 opt-level = 3
 debug = true

@@ -21,12 +21,13 @@ use agb_ext::{
 };
 use crate::player::Player;
 
-agb::include_background_gfx!(tileset, "333333", background => deduplicate "gfx/tile_test.png");
+pub mod tileset {
+    include!(concat!(env!("OUT_DIR"), "/tileset.rs"));
+}
 
-const METATILES: &[[usize; 4]] = &[
-    [0, 0, 1, 1],
-    [1, 1, 1, 1],
-];
+pub mod single_screen_demo {
+    include!(concat!(env!("OUT_DIR"), "/single_screen_demo.rs"));
+}
 
 fn move_and_collide(movement: Vector2D<PosNum>, hitbox: Rect<PosNum>, tilemap: &Tilemap) -> Vector2D<PosNum> {
     let tile_collisions = tilemap.get_collision_seams(movement, hitbox);
@@ -74,25 +75,11 @@ fn main(mut gba: agb::Gba) -> ! {
     let vblank = agb::interrupt::VBlank::get();
 
     let mut gramble = Player::gramble(&object, (48, 96).into());
-    let mut glyde = Player::glyde(&object, (16, 96).into());
-    let mut playing_gramble = false;
+    let mut glyde = Player::glyde(&object, (16, 16).into());
+    //glyde.hide_sprite();
+    let mut playing_gramble = true;
 
-    let tilemap = Tilemap::new(&[
-        0_u8, 0_u8, 0_u8, 0_u8, 0_u8, 0_u8, 0_u8, 0_u8, 0_u8, 0_u8, 0_u8, 0_u8, 0_u8, 0_u8, 0_u8,
-        0_u8, 0_u8, 0_u8, 0_u8, 0_u8, 0_u8, 0_u8, 0_u8, 1_u8, 0_u8, 0_u8, 0_u8, 0_u8, 0_u8, 0_u8,
-        0_u8, 0_u8, 0_u8, 0_u8, 0_u8, 0_u8, 0_u8, 0_u8, 0_u8, 0_u8, 0_u8, 0_u8, 0_u8, 0_u8, 0_u8,
-        0_u8, 0_u8, 0_u8, 0_u8, 0_u8, 0_u8, 0_u8, 0_u8, 0_u8, 0_u8, 0_u8, 0_u8, 0_u8, 0_u8, 0_u8,
-        0_u8, 0_u8, 0_u8, 0_u8, 0_u8, 0_u8, 0_u8, 0_u8, 0_u8, 0_u8, 0_u8, 0_u8, 0_u8, 0_u8, 0_u8,
-        0_u8, 0_u8, 0_u8, 0_u8, 0_u8, 0_u8, 0_u8, 0_u8, 1_u8, 0_u8, 0_u8, 0_u8, 1_u8, 0_u8, 0_u8,
-        1_u8, 0_u8, 0_u8, 0_u8, 0_u8, 0_u8, 0_u8, 1_u8, 2_u8, 0_u8, 0_u8, 0_u8, 0_u8, 0_u8, 0_u8,
-        0_u8, 0_u8, 0_u8, 0_u8, 0_u8, 0_u8, 1_u8, 2_u8, 2_u8, 0_u8, 0_u8, 0_u8, 0_u8, 0_u8, 1_u8,
-        1_u8, 1_u8, 1_u8, 1_u8, 1_u8, 1_u8, 2_u8, 2_u8, 2_u8, 1_u8, 1_u8, 1_u8, 1_u8, 1_u8, 2_u8,
-        0_u8, 0_u8, 0_u8, 0_u8, 0_u8, 0_u8, 0_u8, 0_u8, 0_u8, 0_u8, 0_u8, 0_u8, 0_u8, 0_u8, 0_u8,
-    ], 15, TileSetData{
-        metatiles: &METATILES,
-        palettes: tileset::PALETTES,
-        tile_data: &tileset::background,
-    });
+    let tilemap = single_screen_demo::get_level();
     tilemap.draw_background(&mut background, &mut vram);
     background.commit(&mut vram);
     background.set_visible(true);
@@ -110,6 +97,7 @@ fn main(mut gba: agb::Gba) -> ! {
         glyde.draw(&object);
 
         vblank.wait_for_vblank();
+        background.commit(&mut vram);
         input.update();
         object.commit();
     }
