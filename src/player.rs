@@ -3,7 +3,7 @@ use agb::{
     object::{Object, OamManaged},
     Priority,
   },
-  fixnum::{Vector2D, Rect, Num, num},
+  fixnum::{Vector2D, Rect, num},
   input::{ButtonController, Button, Tri},
 };
 use agb_ext::{
@@ -30,7 +30,7 @@ mod gramble_sprites {
   static IDLE: &Tag = GRAPHICS.tags().get("Idle");
 
   pub fn get_next_anim(anim_enum: AnimEnum) -> Anim<AnimEnum> {
-    match (anim_enum) {
+    match anim_enum {
       AnimEnum::Idle => new_anim!(IDLE, Some(AnimEnum::Idle), (0, 60)),
     }
   }
@@ -50,7 +50,7 @@ mod glyde_sprites {
   static IDLE: &Tag = GRAPHICS.tags().get("Idle");
 
   pub fn get_next_anim(anim_enum: AnimEnum) -> Anim<AnimEnum> {
-    match (anim_enum) {
+    match anim_enum {
       AnimEnum::Idle => new_anim!(IDLE, Some(AnimEnum::Idle), (0, 90), (1, 6), (2, 6), (3, 6))
     }
   }

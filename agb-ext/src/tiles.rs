@@ -2,7 +2,7 @@ use agb::{display::{
   tiled::{MapLoan, VRamManager, RegularMap, TileSet},
   tile_data::TileData,
   palette16::Palette16,
-}, fixnum::{Vector2D, Rect, num}};
+}, fixnum::{Vector2D, Rect}};
 use agb::display::tiled::TileSetting;
 use crate::math::{PosNum, ZERO, MIN_INC};
 
@@ -142,7 +142,7 @@ impl Tilemap {
       self.draw_layer(foreground_data, layer, vram);
     }
   }
-  
+
   fn draw_layer(&self, data: &'static [FlipTile<u8>], layer: &mut MapLoan<RegularMap>, vram: &mut VRamManager) {
     vram.set_background_palettes(self.tileset_data.palettes);
     for (i, metatile_flip_idx) in data.iter().enumerate() {

@@ -9,15 +9,14 @@ mod player;
 use agb::{
     display::{
         Priority,
-        object::{Graphics, OamManaged, Object, Tag},
         tiled::{RegularBackgroundSize, TileFormat, TiledMap},
         blend::{Blend, Layer as BlendLayerPriority, BlendMode},
     },
-    fixnum::{Vector2D, Rect, Num, num},
+    fixnum::{Vector2D, Rect, Num},
     input::{Button, ButtonController},
 };
 use agb_ext::{
-    tiles::{Tilemap, TileSetData},
+    tiles::Tilemap,
     math::PosNum,
 };
 use crate::player::Player;

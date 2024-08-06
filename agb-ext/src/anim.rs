@@ -69,6 +69,7 @@ impl<'o, Enum: Clone> AnimPlayer<'o, Enum> {
       if self.frame_idx == self.cur_anim.frames.len() {
         if let Some(next_anim_enum) = self.cur_anim.next_anim.clone() {
           let next_anim = (self.get_next_anim)(next_anim_enum);
+          self.cur_anim = next_anim;
           self.frame_idx = 0;
           self.load_frame(object);
         }

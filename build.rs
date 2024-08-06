@@ -8,14 +8,15 @@ const LEVELS: &[&str] = &[
   "single_screen_demo"
 ];
 
-fn main() {
+fn main() -> std::io::Result<()> {
   let out_dir = std::env::var("OUT_DIR").expect("OUT_DIR environment variable must be specified");
   let mut loader = Loader::new();
 
-  export_tileset("tileset", "metatileset", &out_dir, &mut loader);
+  export_tileset("tileset", "metatileset", &out_dir, &mut loader)?;
   for level in LEVELS {
-    export_level(level, &out_dir, &mut loader);
+    export_level(level, &out_dir, &mut loader)?;
   }
+  Ok(())
 }
 
 mod tiled_export {
