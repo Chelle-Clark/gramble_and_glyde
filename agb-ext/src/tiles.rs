@@ -30,6 +30,8 @@ pub struct TileSetData {
 
 pub struct Tilemap {
   data: &'static [FlipTile<u8>],
+  background_data: Option<&'static [FlipTile<u8>]>,
+  foreground_data: Option<&'static [FlipTile<u8>]>,
   width: usize,
   height: usize,
   tileset: &'static TileSet<'static>,
@@ -113,9 +115,11 @@ impl Metatile {
 }
 
 impl Tilemap {
-  pub const fn new(data: &'static [FlipTile<u8>], width: usize, tileset_data: &'static TileSetData) -> Self {
+  pub const fn new(data: &'static [FlipTile<u8>], bg: Option<&'static [FlipTile<u8>]>, fg: Option<&'static [FlipTile<u8>]>, width: usize, tileset_data: &'static TileSetData) -> Self {
     Tilemap {
       data,
+      background_data: bg,
+      foreground_data: fg,
       width,
       height: data.len() / width,
       tileset: &tileset_data.tile_data.tiles,
@@ -123,9 +127,25 @@ impl Tilemap {
     }
   }
 
-  pub fn draw_background(&self, background: &mut MapLoan<RegularMap>, vram: &mut VRamManager) {
+  pub fn draw_primary(&self, layer: &mut MapLoan<RegularMap>, vram: &mut VRamManager) {
+    self.draw_layer(self.data, layer, vram);
+  }
+
+  pub fn draw_background(&self, layer: &mut MapLoan<RegularMap>, vram: &mut VRamManager) {
+    if let Some(background_data) = self.background_data {
+      self.draw_layer(background_data, layer, vram);
+    }
+  }
+
+  pub fn draw_foreground(&self, layer: &mut MapLoan<RegularMap>, vram: &mut VRamManager) {
+    if let Some(foreground_data) = self.foreground_data {
+      self.draw_layer(foreground_data, layer, vram);
+    }
+  }
+  
+  fn draw_layer(&self, data: &'static [FlipTile<u8>], layer: &mut MapLoan<RegularMap>, vram: &mut VRamManager) {
     vram.set_background_palettes(self.tileset_data.palettes);
-    for (i, metatile_flip_idx) in self.data.iter().enumerate() {
+    for (i, metatile_flip_idx) in data.iter().enumerate() {
       if metatile_flip_idx.idx() != 0_u8 {
         let x = 2 * (i % self.width) as u16;
         let y = 2 * (i / self.width) as u16;
@@ -141,10 +161,10 @@ impl Tilemap {
           metatile
         };
         let tile_settings = self.tileset_data.tile_data.tile_settings;
-        background.set_tile(vram, (x, y), self.tileset, Self::flipped_tile_settings(tile_settings, metatile.ul));
-        background.set_tile(vram, (x + 1, y), self.tileset, Self::flipped_tile_settings(tile_settings, metatile.ur));
-        background.set_tile(vram, (x, y + 1), self.tileset, Self::flipped_tile_settings(tile_settings, metatile.ll));
-        background.set_tile(vram, (x + 1, y + 1), self.tileset, Self::flipped_tile_settings(tile_settings, metatile.lr));
+        layer.set_tile(vram, (x, y), self.tileset, Self::flipped_tile_settings(tile_settings, metatile.ul));
+        layer.set_tile(vram, (x + 1, y), self.tileset, Self::flipped_tile_settings(tile_settings, metatile.ur));
+        layer.set_tile(vram, (x, y + 1), self.tileset, Self::flipped_tile_settings(tile_settings, metatile.ll));
+        layer.set_tile(vram, (x + 1, y + 1), self.tileset, Self::flipped_tile_settings(tile_settings, metatile.lr));
       }
     }
   }

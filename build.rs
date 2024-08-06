@@ -136,23 +136,34 @@ mod tiled_export {
     let output_file = File::create(format!("{out_dir}/{level}.rs"))?;
     let mut writer = BufWriter::new(output_file);
 
-    let mut main_layer_placed = false;
+    let mut has_background = false;
+    let mut has_foreground = false;
     for layer in map.layers() {
+      let layer_name = layer.name.clone();
       match layer.layer_type() {
         LayerType::Tiles(tile_layer) => {
           match tile_layer {
             TileLayer::Finite(layer) => {
-              if !main_layer_placed {
-                write!(&mut writer, "const DATA: &[FlipTile<u8>] = &[")?;
-                for yi in 0..layer.height() {
-                  for xi in 0..layer.width() {
-                    let tile_id = get_metatile_id(layer.get_tile_data(xi as i32, yi as i32));
-                    write!(&mut writer, "{},", tile_id)?;
-                  }
+              let const_name = match layer_name.as_str() {
+                "Primary" => "DATA",
+                "Background" => {
+                  has_background = true;
+                  "BACKGROUND_DATA"
+                },
+                "Foreground" => {
+                  has_foreground = true;
+                  "FOREGROUND_DATA"
                 }
-                writeln!(&mut writer, "];")?;
-                main_layer_placed = true;
+                _ => "",
+              };
+              write!(&mut writer, "const {const_name}: &[FlipTile<u8>] = &[")?;
+              for yi in 0..layer.height() {
+                for xi in 0..layer.width() {
+                  let tile_id = get_metatile_id(layer.get_tile_data(xi as i32, yi as i32));
+                  write!(&mut writer, "{},", tile_id)?;
+                }
               }
+              writeln!(&mut writer, "];")?;
             },
             _ => {
               panic!("Infinite tile layers not supported!");
@@ -169,13 +180,15 @@ mod tiled_export {
     }
 
     let map_w = map.width;
+    let background_data = if has_background {"Some(&BACKGROUND_DATA)"} else {"None"};
+    let foreground_data = if has_foreground {"Some(&FOREGROUND_DATA)"} else {"None"};
     writeln!(
       &mut writer,
       r#"
       use agb_ext::tiles::{{Tilemap, FlipTile}};
       use crate::tileset;
 
-      static TILEMAP: Tilemap = Tilemap::new(&DATA, {map_w}, &tileset::TILESET_DATA);
+      static TILEMAP: Tilemap = Tilemap::new(&DATA, {background_data}, {foreground_data}, {map_w}, &tileset::TILESET_DATA);
 
       pub fn get_level() -> &'static Tilemap {{
           &TILEMAP

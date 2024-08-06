@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <map version="1.10" tiledversion="1.10.2" orientation="orthogonal" renderorder="right-down" width="15" height="10" tilewidth="16" tileheight="16" infinite="0" nextlayerid="3" nextobjectid="1">
  <tileset firstgid="1" source="metatileset.tsx"/>
- <layer id="1" name="Tile Layer 1" width="15" height="10">
+ <layer id="1" name="Primary" width="15" height="10">
   <data encoding="csv">
 19,0,0,0,0,0,0,0,0,0,0,0,0,0,17,
 19,0,0,0,0,0,0,0,0,0,0,0,0,0,23,
@@ -15,7 +15,7 @@
 18,18,18,18,18,18,18,18,18,18,18,18,18,18,18
 </data>
  </layer>
- <layer id="2" name="Tile Layer 2" width="15" height="10" visible="0">
+ <layer id="2" name="Foreground" width="15" height="10" opacity="0.47">
   <data encoding="csv">
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,

@@ -11,8 +11,9 @@ use agb::{
         Priority,
         object::{Graphics, OamManaged, Object, Tag},
         tiled::{RegularBackgroundSize, TileFormat, TiledMap},
+        blend::{Blend, Layer as BlendLayerPriority, BlendMode},
     },
-    fixnum::{Vector2D, Rect},
+    fixnum::{Vector2D, Rect, Num, num},
     input::{Button, ButtonController},
 };
 use agb_ext::{
@@ -61,11 +62,30 @@ fn physics_process(player: &mut Player, tilemap: &Tilemap, input: Option<&Button
     player.move_by(move_and_collide(player_movement, player.col_rect(), tilemap));
 }
 
+type OpacityNum = Num<u8, 4>;
+mod opacity_num {
+    use crate::OpacityNum;
+
+    pub const ZERO: OpacityNum = OpacityNum::from_raw(0);
+    pub const ONE: OpacityNum = OpacityNum::from_raw(1 << 4);
+    pub const MIN_INC: OpacityNum = OpacityNum::from_raw(1);
+}
+
+fn apply_opacity(opacity: OpacityNum, blend: &mut Blend) {
+    blend.set_blend_weight(BlendLayerPriority::Bottom, opacity_num::ONE - opacity);
+    blend.set_blend_weight(BlendLayerPriority::Top, opacity);
+}
+
 #[agb::entry]
 fn main(mut gba: agb::Gba) -> ! {
     let (tiled0, mut vram) = gba.display.video.tiled0();
-    let mut background = tiled0.background(
-        Priority::P0,
+    let mut primary = tiled0.background(
+        Priority::P2,
+        RegularBackgroundSize::Background32x32,
+        TileFormat::FourBpp,
+    );
+    let mut foreground = tiled0.background(
+        Priority::P1,
         RegularBackgroundSize::Background32x32,
         TileFormat::FourBpp,
     );
@@ -74,15 +94,25 @@ fn main(mut gba: agb::Gba) -> ! {
     let mut input = agb::input::ButtonController::new();
     let vblank = agb::interrupt::VBlank::get();
 
+    let mut blend = gba.display.blend.get();
+    blend.set_blend_mode(BlendMode::Normal);
+    blend.set_background_enable(BlendLayerPriority::Bottom, primary.background(), true);
+    blend.set_background_enable(BlendLayerPriority::Top, foreground.background(), true);
+    let mut opacity = opacity_num::ONE;
+    apply_opacity(opacity, &mut blend);
+
     let mut gramble = Player::gramble(&object, (48, 96).into());
     let mut glyde = Player::glyde(&object, (16, 16).into());
     //glyde.hide_sprite();
     let mut playing_gramble = true;
 
     let tilemap = single_screen_demo::get_level();
-    tilemap.draw_background(&mut background, &mut vram);
-    background.commit(&mut vram);
-    background.set_visible(true);
+    tilemap.draw_primary(&mut primary, &mut vram);
+    primary.commit(&mut vram);
+    primary.set_visible(true);
+    tilemap.draw_foreground(&mut foreground, &mut vram);
+    foreground.commit(&mut vram);
+    foreground.set_visible(true);
     object.commit();
 
     loop {
@@ -93,11 +123,23 @@ fn main(mut gba: agb::Gba) -> ! {
             playing_gramble = !playing_gramble;
         }
 
+        if input.is_pressed(Button::R) {
+            if opacity > opacity_num::ZERO {
+                opacity -= opacity_num::MIN_INC;
+            }
+        } else {
+            opacity += opacity_num::MIN_INC;
+        }
+        opacity = opacity.clamp(opacity_num::ZERO, opacity_num::ONE);
+        apply_opacity(opacity, &mut blend);
+
         gramble.draw(&object);
         glyde.draw(&object);
 
         vblank.wait_for_vblank();
-        background.commit(&mut vram);
+        primary.commit(&mut vram);
+        foreground.commit(&mut vram);
+        blend.commit();
         input.update();
         object.commit();
     }

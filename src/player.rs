@@ -1,5 +1,8 @@
 use agb::{
-  display::object::{Object, OamManaged},
+  display::{
+    object::{Object, OamManaged},
+    Priority,
+  },
   fixnum::{Vector2D, Rect, Num, num},
   input::{ButtonController, Button, Tri},
 };
@@ -95,6 +98,7 @@ impl<'obj> Player<'obj> {
       on_ground: false,
     };
     player.set_position(position);
+    player.anim.sprite_mut().set_priority(Priority::P2);
 
     player
   }
