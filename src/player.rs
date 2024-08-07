@@ -8,7 +8,8 @@ use agb::{
 };
 use agb_ext::{
   math::{PosNum, ZERO},
-  anim::AnimPlayer
+  anim::AnimPlayer,
+  camera::Camera,
 };
 
 #[derive(Copy, Clone)]
@@ -171,7 +172,9 @@ impl<'obj> Player<'obj> {
     self.velocity
   }
 
-  pub fn draw(&mut self, object: &'obj OamManaged) {
+  pub fn draw(&mut self, camera: &Camera, object: &'obj OamManaged) {
+    let sprite_position = (self.position - camera.position()).trunc();
+    self.sprite().set_position(sprite_position);
     self.anim.draw(object);
   }
 
@@ -183,8 +186,10 @@ impl<'obj> Player<'obj> {
 
   pub fn set_position(&mut self, position: Vector2D<PosNum>) {
     self.position = position;
-    let sprite_position = self.position.trunc();
-    self.sprite().set_position(sprite_position);
+  }
+
+  pub fn position(&self) -> Vector2D<PosNum> {
+    self.position
   }
 
   pub fn col_rect(&self) -> Rect<PosNum> {

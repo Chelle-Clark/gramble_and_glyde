@@ -3,3 +3,4 @@
 pub mod anim;
 pub mod tiles;
 pub mod math;
+pub mod camera;

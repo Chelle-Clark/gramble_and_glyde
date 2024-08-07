@@ -18,6 +18,7 @@ use agb::{
 use agb_ext::{
     tiles::Tilemap,
     math::PosNum,
+    camera::Camera,
 };
 use crate::player::Player;
 
@@ -105,11 +106,15 @@ fn main(mut gba: agb::Gba) -> ! {
     //glyde.hide_sprite();
     let mut playing_gramble = true;
 
+    let mut camera = Camera::new();
+
     let tilemap = single_screen_demo::get_level();
     tilemap.draw_primary(&mut primary, &mut vram);
+    primary.set_scroll_pos(camera.position_i16());
     primary.commit(&mut vram);
     primary.set_visible(true);
     tilemap.draw_foreground(&mut foreground, &mut vram);
+    foreground.set_scroll_pos(camera.position_i16());
     foreground.commit(&mut vram);
     foreground.set_visible(true);
     object.commit();
@@ -122,6 +127,9 @@ fn main(mut gba: agb::Gba) -> ! {
             playing_gramble = !playing_gramble;
         }
 
+        let player = if playing_gramble { &gramble } else { &glyde };
+        camera.center_on(player.position());
+
         if input.is_pressed(Button::R) {
             if opacity > opacity_num::ZERO {
                 opacity -= opacity_num::MIN_INC;
@@ -132,8 +140,10 @@ fn main(mut gba: agb::Gba) -> ! {
         opacity = opacity.clamp(opacity_num::ZERO, opacity_num::ONE);
         apply_opacity(opacity, &mut blend);
 
-        gramble.draw(&object);
-        glyde.draw(&object);
+        gramble.draw(&camera, &object);
+        glyde.draw(&camera, &object);
+        primary.set_scroll_pos(camera.position_i16());
+        foreground.set_scroll_pos(camera.position_i16());
 
         vblank.wait_for_vblank();
         primary.commit(&mut vram);
