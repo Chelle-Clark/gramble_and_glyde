@@ -34,4 +34,8 @@ impl Camera {
     let trunc_pos = self.pos.trunc();
     Vector2D::new(trunc_pos.x as i16, trunc_pos.y as i16)
   }
+
+  pub fn set_limits(&mut self, max_limit: Vector2D<PosNum>) {
+    self.max_limit = max_limit;
+  }
 }

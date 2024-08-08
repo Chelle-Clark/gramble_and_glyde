@@ -1,10 +1,13 @@
+use alloc::boxed::Box;
 use agb::{display::{
-  tiled::{MapLoan, VRamManager, RegularMap, TileSet},
+  tiled::{MapLoan, VRamManager, RegularMap, TileSet, TileSetting},
   tile_data::TileData,
   palette16::Palette16,
 }, fixnum::{Vector2D, Rect}};
-use agb::display::tiled::TileSetting;
-use crate::math::{PosNum, ZERO, MIN_INC};
+use crate::{
+  math::{PosNum, ZERO, MIN_INC},
+  camera::Camera,
+};
 
 #[derive(Clone, Copy)]
 pub enum FlipTile<I> {
@@ -28,6 +31,7 @@ pub struct TileSetData {
   pub tile_data: &'static TileData,
 }
 
+#[derive(Clone)]
 pub struct Tilemap {
   data: &'static [FlipTile<u8>],
   background_data: Option<&'static [FlipTile<u8>]>,
@@ -115,7 +119,12 @@ impl Metatile {
 }
 
 impl Tilemap {
-  pub const fn new(data: &'static [FlipTile<u8>], bg: Option<&'static [FlipTile<u8>]>, fg: Option<&'static [FlipTile<u8>]>, width: usize, tileset_data: &'static TileSetData) -> Self {
+  pub const fn new(
+      data: &'static [FlipTile<u8>],
+      bg: Option<&'static [FlipTile<u8>]>,
+      fg: Option<&'static [FlipTile<u8>]>,
+      width: usize,
+      tileset_data: &'static TileSetData) -> Self {
     Tilemap {
       data,
       background_data: bg,
@@ -127,46 +136,86 @@ impl Tilemap {
     }
   }
 
-  pub fn draw_primary(&self, layer: &mut MapLoan<RegularMap>, vram: &mut VRamManager) {
-    self.draw_layer(self.data, layer, vram);
+  pub fn primary_tile_fn<'a>(&'a self) -> Box<dyn Fn(Vector2D<i32>) -> (&'a TileSet<'a>, TileSetting) + 'a> {
+    let self_clone = self.clone();
+    Box::new(move |pos| {
+      (
+        self_clone.tileset,
+        self_clone.get_tile(self_clone.data, pos),
+      )
+    })
   }
 
-  pub fn draw_background(&self, layer: &mut MapLoan<RegularMap>, vram: &mut VRamManager) {
-    if let Some(background_data) = self.background_data {
-      self.draw_layer(background_data, layer, vram);
+  pub fn background_tile_fn<'a>(&'a self) -> Box<dyn Fn(Vector2D<i32>) -> (&'a TileSet<'a>, TileSetting) + 'a> {
+    let self_clone = self.clone();
+    if let Some(data) = self.background_data {
+      Box::new(move |pos| {
+        (
+          self_clone.tileset,
+          self_clone.get_tile(data, pos),
+        )
+      })
+    } else {
+      Box::new(move |_| (self_clone.tileset, TileSetting::BLANK))
     }
   }
 
-  pub fn draw_foreground(&self, layer: &mut MapLoan<RegularMap>, vram: &mut VRamManager) {
-    if let Some(foreground_data) = self.foreground_data {
-      self.draw_layer(foreground_data, layer, vram);
+  pub fn foreground_tile_fn<'a>(&'a self) -> Box<dyn Fn(Vector2D<i32>) -> (&'a TileSet<'a>, TileSetting) + 'a> {
+    let self_clone = self.clone();
+    if let Some(data) = self.foreground_data {
+      Box::new(move |pos| {
+        (
+          self_clone.tileset,
+          self_clone.get_tile(data, pos),
+        )
+      })
+    } else {
+      Box::new(move |_| (self_clone.tileset, TileSetting::BLANK))
     }
   }
 
-  fn draw_layer(&self, data: &'static [FlipTile<u8>], layer: &mut MapLoan<RegularMap>, vram: &mut VRamManager) {
-    vram.set_background_palettes(self.tileset_data.palettes);
-    for (i, metatile_flip_idx) in data.iter().enumerate() {
-      if metatile_flip_idx.idx() != 0_u8 {
-        let x = 2 * (i % self.width) as u16;
-        let y = 2 * (i / self.width) as u16;
+  fn get_tile(&self, data: &'static [FlipTile<u8>], pos: Vector2D<i32>) -> TileSetting {
+    let metatile_pos = pos / 2;
+    let lower = pos.y % 2 == 1;
+    let right = pos.x % 2 == 1;
+    if metatile_pos.x < 0 || metatile_pos.x >= self.width as i32 || metatile_pos.y < 0 || metatile_pos.y >= self.height as i32 {
+      return TileSetting::BLANK;
+    }
+    let metatile_flip_idx = data[metatile_pos.x as usize + self.width * metatile_pos.y as usize];
+    if metatile_flip_idx.idx() > 0 {
+      let metatile = {
         let metatile_idx = (metatile_flip_idx.idx() - 1) as usize;
-        let metatile = {
-          let mut metatile = self.tileset_data.metatiles[metatile_idx];
-          if metatile_flip_idx.x_flipped() {
-            metatile = metatile.flip_x();
-          }
-          if metatile_flip_idx.y_flipped() {
-            metatile = metatile.flip_y();
-          }
-          metatile
-        };
-        let tile_settings = self.tileset_data.tile_data.tile_settings;
-        layer.set_tile(vram, (x, y), self.tileset, Self::flipped_tile_settings(tile_settings, metatile.ul));
-        layer.set_tile(vram, (x + 1, y), self.tileset, Self::flipped_tile_settings(tile_settings, metatile.ur));
-        layer.set_tile(vram, (x, y + 1), self.tileset, Self::flipped_tile_settings(tile_settings, metatile.ll));
-        layer.set_tile(vram, (x + 1, y + 1), self.tileset, Self::flipped_tile_settings(tile_settings, metatile.lr));
-      }
+        let mut metatile = self.tileset_data.metatiles[metatile_idx];
+        if metatile_flip_idx.x_flipped() {
+          metatile = metatile.flip_x();
+        }
+        if metatile_flip_idx.y_flipped() {
+          metatile = metatile.flip_y();
+        }
+        metatile
+      };
+      let tile_settings = self.tileset_data.tile_data.tile_settings;
+      let tile_idx = match (lower, right) {
+        (false, false) => metatile.ul,
+        (false, true) => metatile.ur,
+        (true, false) => metatile.ll,
+        (true, true) => metatile.lr,
+      };
+
+      let result = Self::flipped_tile_settings(tile_settings, tile_idx);
+      agb::println!("{:?} at ({}, {})", result, pos.x, pos.y);
+      result
+    } else {
+      TileSetting::BLANK
     }
+  }
+
+  pub fn load_tileset_palette(&self, vram: &mut VRamManager) {
+    vram.set_background_palettes(self.tileset_data.palettes);
+  }
+
+  pub fn set_camera_limits(&self, camera: &mut Camera) {
+    camera.set_limits((PosNum::new(self.width as i32 * 16), PosNum::new(self.height as i32 * 16)).into())
   }
 
   fn flipped_tile_settings(tile_settings: &[TileSetting], tile_idx: FlipTile<usize>) -> TileSetting {

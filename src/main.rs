@@ -9,12 +9,13 @@ mod player;
 use agb::{
     display::{
         Priority,
-        tiled::{RegularBackgroundSize, TileFormat, TiledMap},
+        tiled::{RegularBackgroundSize, TileFormat, TiledMap, InfiniteScrolledMap},
         blend::{Blend, Layer as BlendLayerPriority, BlendMode},
     },
     fixnum::{Vector2D, Rect, Num},
     input::{Button, ButtonController},
 };
+use agb::sound::mixer::{Frequency, SoundChannel};
 use agb_ext::{
     tiles::Tilemap,
     math::PosNum,
@@ -27,7 +28,7 @@ pub mod tileset {
 }
 
 pub mod single_screen_demo {
-    include!(concat!(env!("OUT_DIR"), "/single_screen_demo.rs"));
+    include!(concat!(env!("OUT_DIR"), "/grambles_room.rs"));
 }
 
 fn move_and_collide(movement: Vector2D<PosNum>, hitbox: Rect<PosNum>, tilemap: &Tilemap) -> Vector2D<PosNum> {
@@ -108,13 +109,16 @@ fn main(mut gba: agb::Gba) -> ! {
 
     let mut camera = Camera::new();
 
-    let tilemap = single_screen_demo::get_level();
-    tilemap.draw_primary(&mut primary, &mut vram);
-    primary.set_scroll_pos(camera.position_i16());
+    let tilemap: &Tilemap = &single_screen_demo::TILEMAP;
+    tilemap.load_tileset_palette(&mut vram);
+    tilemap.set_camera_limits(&mut camera);
+
+    let mut primary = InfiniteScrolledMap::new(primary, tilemap.primary_tile_fn());
+    primary.init(&mut vram, (0, 0).into(), &mut || {});
     primary.commit(&mut vram);
     primary.set_visible(true);
-    tilemap.draw_foreground(&mut foreground, &mut vram);
-    foreground.set_scroll_pos(camera.position_i16());
+    let mut foreground = InfiniteScrolledMap::new(foreground, tilemap.foreground_tile_fn());
+    foreground.init(&mut vram, (0, 0).into(), &mut || {});
     foreground.commit(&mut vram);
     foreground.set_visible(true);
     object.commit();
@@ -140,10 +144,14 @@ fn main(mut gba: agb::Gba) -> ! {
         opacity = opacity.clamp(opacity_num::ZERO, opacity_num::ONE);
         apply_opacity(opacity, &mut blend);
 
+        if input.is_just_pressed(Button::START) {
+            break;
+        }
+
         gramble.draw(&camera, &object);
         glyde.draw(&camera, &object);
-        primary.set_scroll_pos(camera.position_i16());
-        foreground.set_scroll_pos(camera.position_i16());
+        primary.set_pos(&mut vram, camera.position().trunc());
+        foreground.set_pos(&mut vram, camera.position().trunc());
 
         vblank.wait_for_vblank();
         primary.commit(&mut vram);
@@ -152,4 +160,8 @@ fn main(mut gba: agb::Gba) -> ! {
         input.update();
         object.commit();
     }
+
+    primary.clear(&mut vram);
+    foreground.clear(&mut vram);
+    loop {}
 }

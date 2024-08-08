@@ -189,11 +189,7 @@ mod tiled_export {
       use agb_ext::tiles::{{Tilemap, FlipTile}};
       use crate::tileset;
 
-      static TILEMAP: Tilemap = Tilemap::new(&DATA, {background_data}, {foreground_data}, {map_w}, &tileset::TILESET_DATA);
-
-      pub fn get_level() -> &'static Tilemap {{
-          &TILEMAP
-      }}
+      pub static TILEMAP: Tilemap = Tilemap::new(&DATA, {background_data}, {foreground_data}, {map_w}, &tileset::TILESET_DATA);
       "#
     )?;
 
