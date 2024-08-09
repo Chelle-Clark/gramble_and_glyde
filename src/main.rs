@@ -9,7 +9,7 @@ mod player;
 use agb::{
     display::{
         Priority,
-        tiled::{RegularBackgroundSize, TileFormat, TiledMap, InfiniteScrolledMap},
+        tiled::{RegularBackgroundSize, TileFormat, TiledMap, InfiniteScrolledMap, PartialUpdateStatus, VRamManager},
         blend::{Blend, Layer as BlendLayerPriority, BlendMode},
     },
     fixnum::{Vector2D, Rect, Num},
@@ -132,7 +132,7 @@ fn main(mut gba: agb::Gba) -> ! {
         }
 
         let player = if playing_gramble { &gramble } else { &glyde };
-        camera.center_on(player.position());
+        camera.smoothed_center_on(player.position());
 
         if input.is_pressed(Button::R) {
             if opacity > opacity_num::ZERO {
