@@ -45,8 +45,9 @@ pub mod sounds {
 
 fn move_and_collide(movement: Vector2D<PosNum>, hitbox: Rect<PosNum>, tilemap: &Tilemap, in_pipe: bool) -> Vector2D<PosNum> {
     let tile_collisions = tilemap.get_collision_seams(movement, hitbox, in_pipe);
+    let (x_collision, y_collision) = tile_collisions.slide_corners();
     let mut actual = movement.clone();
-    if let Some(x_collision) = tile_collisions.x_seam {
+    if let Some(x_collision) = x_collision {
         let desired_x = {
             let mut value = PosNum::new(x_collision);
             if movement.x > PosNum::new(0) {
@@ -56,7 +57,7 @@ fn move_and_collide(movement: Vector2D<PosNum>, hitbox: Rect<PosNum>, tilemap: &
         };
         actual.x = desired_x - hitbox.position.x;
     }
-    if let Some(y_collision) = tile_collisions.y_seam {
+    if let Some(y_collision) = y_collision {
         let desired_y = {
             let mut value = PosNum::new(y_collision);
             if movement.y > PosNum::new(0) {
