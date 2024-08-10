@@ -140,8 +140,10 @@ fn main(mut gba: agb::Gba) -> ! {
     object.commit();
 
     loop {
-        physics_process(&mut gramble, &tilemap, if playing_gramble {Some(&input)} else {None});
-        physics_process(&mut glyde, &tilemap, if !playing_gramble {Some(&input)} else {None});
+        let gramble_input = if playing_gramble {Some(&input)} else {None};
+        let glyde_input = if !playing_gramble {Some(&input)} else {None};
+        physics_process(&mut gramble, &tilemap, gramble_input);
+        physics_process(&mut glyde, &tilemap, glyde_input);
 
         if input.is_just_pressed(Button::L) {
             playing_gramble = !playing_gramble;
@@ -164,8 +166,8 @@ fn main(mut gba: agb::Gba) -> ! {
             break;
         }
 
-        gramble.draw(&camera, &object);
-        glyde.draw(&camera, &object);
+        gramble.draw(&camera, &object, gramble_input);
+        glyde.draw(&camera, &object, glyde_input);
         primary.set_pos(&mut vram, camera.position().trunc());
         foreground.set_pos(&mut vram, camera.position().trunc());
 

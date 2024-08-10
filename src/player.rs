@@ -12,9 +12,11 @@ use agb_ext::{
   camera::Camera,
 };
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, PartialEq)]
 enum AnimEnum {
   Idle,
+  RunLeadup,
+  Run,
 }
 
 mod gramble_sprites {
@@ -33,6 +35,8 @@ mod gramble_sprites {
   pub fn get_next_anim(anim_enum: AnimEnum) -> Anim<AnimEnum> {
     match anim_enum {
       AnimEnum::Idle => new_anim!(IDLE, Some(AnimEnum::Idle), (0, 60)),
+      AnimEnum::RunLeadup => new_anim!(IDLE, Some(AnimEnum::Run), (0, 60)),
+      AnimEnum::Run => new_anim!(IDLE, Some(AnimEnum::Run), (0, 60)),
     }
   }
 }
@@ -49,10 +53,14 @@ mod glyde_sprites {
 
   static GRAPHICS: &Graphics = agb::include_aseprite!("gfx/glyde.aseprite");
   static IDLE: &Tag = GRAPHICS.tags().get("Idle");
+  static RUN: &Tag = GRAPHICS.tags().get("Run");
+  static RUN_LEADUP: &Tag = GRAPHICS.tags().get("RunLeadup");
 
   pub fn get_next_anim(anim_enum: AnimEnum) -> Anim<AnimEnum> {
     match anim_enum {
-      AnimEnum::Idle => new_anim!(IDLE, Some(AnimEnum::Idle), (0, 90), (1, 6), (2, 6), (3, 6))
+      AnimEnum::Idle => new_anim!(IDLE, Some(AnimEnum::Idle), (0, 90), (1, 6), (2, 6), (3, 6)),
+      AnimEnum::RunLeadup => new_anim!(RUN_LEADUP, Some(AnimEnum::Run), (0, 4)),
+      AnimEnum::Run => new_anim!(RUN, Some(AnimEnum::Run), (0, 4), (1, 4), (2, 4), (3, 4), (4, 4), (5, 4), (6, 4)),
     }
   }
 }
@@ -166,15 +174,27 @@ impl<'obj> Player<'obj> {
     };
 
     match tri {
-      Tri::Negative => { self.sprite().set_hflip(true); },
-      Tri::Positive => { self.sprite().set_hflip(false); },
+      Tri::Negative => {
+        self.sprite().set_hflip(true);
+      },
+      Tri::Positive => {
+        self.sprite().set_hflip(false);
+      },
       _ => {}
     };
 
     self.velocity
   }
 
-  pub fn draw(&mut self, camera: &Camera, object: &'obj OamManaged) {
+  pub fn draw(&mut self, camera: &Camera, object: &'obj OamManaged, input: Option<&ButtonController>) {
+    if input.map(|input| input.x_tri() != Tri::Zero) == Some(true) {
+      if self.anim.cur_anim() != AnimEnum::Run {
+        self.anim.set_anim(AnimEnum::RunLeadup, object);
+      }
+    } else {
+      self.anim.set_anim(AnimEnum::Idle, object);
+    }
+
     let sprite_position = (self.position - camera.position()).trunc();
     self.sprite().set_position(sprite_position);
     self.anim.draw(object);
