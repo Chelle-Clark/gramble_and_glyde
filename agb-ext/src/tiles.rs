@@ -203,7 +203,6 @@ impl Tilemap {
       };
 
       let result = Self::flipped_tile_settings(tile_settings, tile_idx);
-      agb::println!("{:?} at ({}, {})", result, pos.x, pos.y);
       result
     } else {
       TileSetting::BLANK

@@ -7,7 +7,7 @@ use agb::{
   input::{ButtonController, Button, Tri},
 };
 use agb_ext::{
-  math::{PosNum, ZERO},
+  math::{PosNum, ZERO, const_num_i32},
   anim::AnimPlayer,
   camera::Camera,
 };
@@ -73,6 +73,17 @@ pub struct Player<'obj> {
 }
 
 impl<'obj> Player<'obj> {
+  const ACCELERATION: PosNum = const_num_i32(0,2);
+  const GRAVITY: PosNum = const_num_i32(0,1);
+  const GRAMBLE_MAX_VEL: PosNum = const_num_i32(3,0);
+  const GLYDE_MAX_VEL: PosNum = const_num_i32(2,5);
+  const GRAMBLE_MAX_HEIGHT: PosNum = const_num_i32(35,0);
+  const GLYDE_MAX_HEIGHT: PosNum = const_num_i32(19,5);
+
+  fn jump_impulse(max_height: PosNum) -> PosNum {
+    (PosNum::new(2) * Self::GRAVITY * max_height).sqrt()
+  }
+
   pub fn gramble(object: &'obj OamManaged, position: Vector2D<PosNum>) -> Player<'obj> {
     Self::new(
       AnimPlayer::new(object, gramble_sprites::get_next_anim, AnimEnum::Idle),
@@ -109,18 +120,9 @@ impl<'obj> Player<'obj> {
   }
 
   pub fn propose_movement(&mut self, input: Option<&ButtonController>) -> Vector2D<PosNum> {
-    let acceleration: PosNum = num!(0.2);
-    let max_velocity: PosNum = match self.player_type {
-      PlayerType::Gramble => num!(3.0),
-      PlayerType::Glyde => num!(2.5),
-    };
-    let gravity: PosNum = num!(0.1);
-    let jump_impulse: PosNum = {
-      let max_height: PosNum = match self.player_type {
-        PlayerType::Gramble => 35,
-        PlayerType::Glyde => 19,
-      }.into();
-      (PosNum::new(2) * gravity * max_height).sqrt()
+    let (max_velocity, jump_impulse) = match self.player_type {
+      PlayerType::Gramble => (Self::GRAMBLE_MAX_VEL, Self::jump_impulse(Self::GRAMBLE_MAX_HEIGHT)),
+      PlayerType::Glyde => (Self::GLYDE_MAX_VEL, Self::jump_impulse(Self::GLYDE_MAX_HEIGHT)),
     };
 
     let tri = {
@@ -134,10 +136,10 @@ impl<'obj> Player<'obj> {
     self.velocity = {
       let mut vel = self.velocity.clone();
       if vel.x > desired_x_vel {
-        vel.x -= acceleration;
+        vel.x -= Self::ACCELERATION;
         vel.x = vel.x.clamp(desired_x_vel, max_velocity);
       } else {
-        vel.x += acceleration;
+        vel.x += Self::ACCELERATION;
         vel.x = vel.x.clamp(-max_velocity, desired_x_vel);
       }
       if vel.x.abs() < num!(0.5) {
@@ -148,12 +150,12 @@ impl<'obj> Player<'obj> {
         }
       }
 
-      vel.y += gravity;
+      vel.y += Self::GRAVITY;
       if let Some(input) = input {
         if input.is_just_pressed(Button::B) && self.on_ground {
           vel.y = -jump_impulse;
         } else if input.is_released(Button::B) {
-          vel.y += gravity * num!(0.75);
+          vel.y += Self::GRAVITY * num!(0.75);
         }
       }
 

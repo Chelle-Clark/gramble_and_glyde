@@ -31,6 +31,18 @@ pub mod single_screen_demo {
     include!(concat!(env!("OUT_DIR"), "/grambles_room.rs"));
 }
 
+pub mod sounds {
+    use agb::fixnum::Num;
+    use agb::include_wav;
+    use agb_ext::{
+        sound::Music,
+        math::const_num_u32,
+    };
+
+    static TITLE_DATA: &[u8] = include_wav!("sound/Title.wav");
+    pub static TITLE: Music = Music::new(TITLE_DATA, const_num_u32(7,125));
+}
+
 fn move_and_collide(movement: Vector2D<PosNum>, hitbox: Rect<PosNum>, tilemap: &Tilemap) -> Vector2D<PosNum> {
     let tile_collisions = tilemap.get_collision_seams(movement, hitbox);
     let mut actual = movement.clone();
@@ -95,6 +107,10 @@ fn main(mut gba: agb::Gba) -> ! {
     let mut input = agb::input::ButtonController::new();
     let vblank = agb::interrupt::VBlank::get();
 
+    let mut mixer = gba.mixer.mixer(Frequency::Hz32768);
+    mixer.enable();
+    sounds::TITLE.play(&mut mixer);
+
     let mut blend = gba.display.blend.get();
     blend.set_blend_mode(BlendMode::Normal);
     blend.set_background_enable(BlendLayerPriority::Bottom, primary.background(), true);
@@ -158,6 +174,7 @@ fn main(mut gba: agb::Gba) -> ! {
         foreground.commit(&mut vram);
         blend.commit();
         input.update();
+        mixer.frame();
         object.commit();
     }
 
