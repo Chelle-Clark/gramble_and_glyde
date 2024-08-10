@@ -145,26 +145,40 @@ mod tiled_export {
         LayerType::Tiles(tile_layer) => {
           match tile_layer {
             TileLayer::Finite(layer) => {
-              let const_name = match layer_name.as_str() {
-                "Primary" => "DATA",
-                "Background" => {
-                  has_background = true;
-                  "BACKGROUND_DATA"
-                },
-                "Foreground" => {
-                  has_foreground = true;
-                  "FOREGROUND_DATA"
+              if layer_name.as_str() == "Collision" {
+                write!(&mut writer, "const COLLISION: &[C] = &[")?;
+                for yi in 0..layer.height() {
+                  for xi in 0..layer.width() {
+                    let collide_tile_type = match layer.get_tile_data(xi as i32, yi as i32) {
+                      Some(tile) => get_collide_tile_type(tile.id()),
+                      None => "Pass",
+                    };
+                    write!(&mut writer, "C::{},", collide_tile_type)?;
+                  }
                 }
-                _ => "",
-              };
-              write!(&mut writer, "const {const_name}: &[FlipTile<u8>] = &[")?;
-              for yi in 0..layer.height() {
-                for xi in 0..layer.width() {
-                  let tile_id = get_metatile_id(layer.get_tile_data(xi as i32, yi as i32));
-                  write!(&mut writer, "{},", tile_id)?;
+                writeln!(&mut writer, "];")?;
+              } else {
+                let const_name = match layer_name.as_str() {
+                  "Primary" => "DATA",
+                  "Background" => {
+                    has_background = true;
+                    "BACKGROUND_DATA"
+                  },
+                  "Foreground" => {
+                    has_foreground = true;
+                    "FOREGROUND_DATA"
+                  }
+                  _ => "",
+                };
+                write!(&mut writer, "const {const_name}: &[FlipTile<u8>] = &[")?;
+                for yi in 0..layer.height() {
+                  for xi in 0..layer.width() {
+                    let tile_id = get_metatile_id(layer.get_tile_data(xi as i32, yi as i32));
+                    write!(&mut writer, "{},", tile_id)?;
+                  }
                 }
+                writeln!(&mut writer, "];")?;
               }
-              writeln!(&mut writer, "];")?;
             },
             _ => {
               panic!("Infinite tile layers not supported!");
@@ -186,10 +200,10 @@ mod tiled_export {
     writeln!(
       &mut writer,
       r#"
-      use agb_ext::tiles::{{Tilemap, FlipTile}};
+      use agb_ext::tiles::{{Tilemap, FlipTile, CollideTileType as C}};
       use crate::tileset;
 
-      pub static TILEMAP: Tilemap = Tilemap::new(&DATA, {background_data}, {foreground_data}, {map_w}, &tileset::TILESET_DATA);
+      pub static TILEMAP: Tilemap = Tilemap::new(&DATA, {background_data}, {foreground_data}, &COLLISION, {map_w}, &tileset::TILESET_DATA);
       "#
     )?;
 
@@ -209,6 +223,17 @@ mod tiled_export {
         suffix: "_u8",
         flip: "N",
       }
+    }
+  }
+
+  fn get_collide_tile_type(tile: u32) -> &'static str {
+    match tile {
+      0 => "Solid",
+      1 => "LWall",
+      2 => "RWall",
+      3 => "Pipe",
+      7 => "PipeSolid",
+      _ => "Pass",
     }
   }
 }

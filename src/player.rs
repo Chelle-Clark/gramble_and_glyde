@@ -39,6 +39,16 @@ mod gramble_sprites {
       AnimEnum::Run => new_anim!(IDLE, Some(AnimEnum::Run), (0, 60)),
     }
   }
+
+  pub mod pipe {
+    use super::*;
+    static GRAPHICS: &Graphics = agb::include_aseprite!("gfx/gramble_pipe.aseprite");
+    static IDLE: &Tag = GRAPHICS.tags().get("Idle");
+
+    pub fn get_next_anim(anim_enum: AnimEnum) -> Anim<AnimEnum> {
+      new_anim!(IDLE, Some(AnimEnum::Idle), (0, 60))
+    }
+  }
 }
 
 mod glyde_sprites {
@@ -70,6 +80,14 @@ enum PlayerType {
   Glyde,
 }
 
+pub trait Controllable {
+  fn propose_movement(&mut self, input: Option<&ButtonController>) -> Vector2D<PosNum>;
+  fn move_by(&mut self, offset: Vector2D<PosNum>);
+  fn set_position(&mut self, position: Vector2D<PosNum>);
+  fn position(&self) -> Vector2D<PosNum>;
+  fn col_rect(&self) -> Rect<PosNum>;
+}
+
 pub struct Player<'obj> {
   anim: AnimPlayer<'obj, AnimEnum>,
   position: Vector2D<PosNum>,
@@ -78,6 +96,11 @@ pub struct Player<'obj> {
   col_rect: Rect<PosNum>,
   player_type: PlayerType,
   on_ground: bool,
+}
+
+pub struct GramblePipe<'obj> {
+  anim: AnimPlayer<'obj, AnimEnum>,
+  position: Vector2D<PosNum>,
 }
 
 impl<'obj> Player<'obj> {
@@ -127,7 +150,27 @@ impl<'obj> Player<'obj> {
     self.sprite().hide();
   }
 
-  pub fn propose_movement(&mut self, input: Option<&ButtonController>) -> Vector2D<PosNum> {
+  pub fn draw(&mut self, camera: &Camera, object: &'obj OamManaged, input: Option<&ButtonController>) {
+    if input.map(|input| input.x_tri() != Tri::Zero) == Some(true) {
+      if self.anim.cur_anim() != AnimEnum::Run {
+        self.anim.set_anim(AnimEnum::RunLeadup, object);
+      }
+    } else {
+      self.anim.set_anim(AnimEnum::Idle, object);
+    }
+
+    let sprite_position = (self.position - camera.position()).trunc();
+    self.sprite().set_position(sprite_position);
+    self.anim.draw(object);
+  }
+
+  fn sprite(&mut self) -> &mut Object<'obj> {
+    self.anim.sprite_mut()
+  }
+}
+
+impl<'obj> Controllable for Player<'obj> {
+  fn propose_movement(&mut self, input: Option<&ButtonController>) -> Vector2D<PosNum> {
     let (max_velocity, jump_impulse) = match self.player_type {
       PlayerType::Gramble => (Self::GRAMBLE_MAX_VEL, Self::jump_impulse(Self::GRAMBLE_MAX_HEIGHT)),
       PlayerType::Glyde => (Self::GLYDE_MAX_VEL, Self::jump_impulse(Self::GLYDE_MAX_HEIGHT)),
@@ -186,39 +229,72 @@ impl<'obj> Player<'obj> {
     self.velocity
   }
 
-  pub fn draw(&mut self, camera: &Camera, object: &'obj OamManaged, input: Option<&ButtonController>) {
-    if input.map(|input| input.x_tri() != Tri::Zero) == Some(true) {
-      if self.anim.cur_anim() != AnimEnum::Run {
-        self.anim.set_anim(AnimEnum::RunLeadup, object);
-      }
-    } else {
-      self.anim.set_anim(AnimEnum::Idle, object);
-    }
-
-    let sprite_position = (self.position - camera.position()).trunc();
-    self.sprite().set_position(sprite_position);
-    self.anim.draw(object);
-  }
-
-  pub fn move_by(&mut self, offset: Vector2D<PosNum>) {
+  fn move_by(&mut self, offset: Vector2D<PosNum>) {
     self.on_ground = self.velocity.y > ZERO && offset.y == ZERO;
     self.velocity = offset;
     self.set_position(self.position + offset);
   }
 
-  pub fn set_position(&mut self, position: Vector2D<PosNum>) {
+  fn set_position(&mut self, position: Vector2D<PosNum>) {
     self.position = position;
   }
 
-  pub fn position(&self) -> Vector2D<PosNum> {
+  fn position(&self) -> Vector2D<PosNum> {
     self.position
   }
 
-  pub fn col_rect(&self) -> Rect<PosNum> {
+  fn col_rect(&self) -> Rect<PosNum> {
     Rect::new(self.position + self.col_rect.position, self.col_rect.size)
+  }
+}
+
+
+impl<'obj> GramblePipe<'obj> {
+  pub fn new(object: &'obj OamManaged, position: Vector2D<PosNum>) -> Self {
+    Self {
+      anim: AnimPlayer::new(object, gramble_sprites::pipe::get_next_anim, AnimEnum::Idle),
+      position
+    }
+  }
+
+  pub fn draw(&mut self, camera: &Camera, object: &'obj OamManaged) {
+    let sprite_position = (self.position - camera.position()).trunc();
+    self.sprite().set_position(sprite_position);
+    self.anim.draw(object);
   }
 
   fn sprite(&mut self) -> &mut Object<'obj> {
     self.anim.sprite_mut()
+  }
+}
+
+const PIPE_MOVE_SPEED: PosNum = const_num_i32(3,5);
+
+impl<'obj> Controllable for GramblePipe<'obj> {
+  fn propose_movement(&mut self, input: Option<&ButtonController>) -> Vector2D<PosNum> {
+    if let Some(input) = input {
+      let x_tri = input.x_tri();
+      let y_tri = input.y_tri();
+
+      Vector2D::new(PosNum::new(x_tri as i32) * PIPE_MOVE_SPEED, PosNum::new(y_tri as i32) * PIPE_MOVE_SPEED)
+    } else {
+      Vector2D::new(ZERO, ZERO)
+    }
+  }
+
+  fn move_by(&mut self, offset: Vector2D<PosNum>) {
+    self.set_position(self.position + offset);
+  }
+
+  fn set_position(&mut self, position: Vector2D<PosNum>) {
+    self.position = position;
+  }
+
+  fn position(&self) -> Vector2D<PosNum> {
+    self.position
+  }
+
+  fn col_rect(&self) -> Rect<PosNum> {
+    Rect::new(self.position, (16, 16).into())
   }
 }

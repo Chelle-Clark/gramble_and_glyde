@@ -1,4 +1,5 @@
 use alloc::boxed::Box;
+use core::mem::transmute;
 use agb::{display::{
   tiled::{MapLoan, VRamManager, RegularMap, TileSet, TileSetting},
   tile_data::TileData,
@@ -15,6 +16,16 @@ pub enum FlipTile<I> {
   X(I),
   Y(I),
   XY(I),
+}
+
+#[derive(Clone, Copy)]
+pub enum CollideTileType {
+  Pass,
+  Solid,
+  LWall,
+  RWall,
+  Pipe,
+  PipeSolid,
 }
 
 #[derive(Clone, Copy)]
@@ -36,6 +47,7 @@ pub struct Tilemap {
   data: &'static [FlipTile<u8>],
   background_data: Option<&'static [FlipTile<u8>]>,
   foreground_data: Option<&'static [FlipTile<u8>]>,
+  collision_data: &'static [CollideTileType],
   width: usize,
   height: usize,
   tileset: &'static TileSet<'static>,
@@ -123,12 +135,14 @@ impl Tilemap {
       data: &'static [FlipTile<u8>],
       bg: Option<&'static [FlipTile<u8>]>,
       fg: Option<&'static [FlipTile<u8>]>,
+      col: &'static [CollideTileType],
       width: usize,
       tileset_data: &'static TileSetData) -> Self {
     Tilemap {
       data,
       background_data: bg,
       foreground_data: fg,
+      collision_data: col,
       width,
       height: data.len() / width,
       tileset: &tileset_data.tile_data.tiles,
@@ -228,7 +242,7 @@ impl Tilemap {
     tile_setting
   }
 
-  pub fn get_collision_seams(&self, movement: Vector2D<PosNum>, hitbox: Rect<PosNum>) -> Collision {
+  pub fn get_collision_seams(&self, movement: Vector2D<PosNum>, hitbox: Rect<PosNum>, in_pipe: bool) -> Collision {
     let px_per_tile = PosNum::new(16);
     let entered_x = {
       let cur_edge = {
@@ -271,7 +285,8 @@ impl Tilemap {
           };
           let mut result = None;
           for i in tile_left_x..=tile_right_x {
-            if i >= 0 && i < self.width as i32 && self.data[tilemap_entered_y * self.width + i as usize].idx() != 0 {
+            let tile_idx = tilemap_entered_y * self.width + i as usize;
+            if i >= 0 && i < self.width as i32 && Self::is_tile_colliding(self.collision_data[tile_idx], in_pipe) {
               let upper_y = {
                 if movement.y < ZERO {
                   entered_y + 1
@@ -301,7 +316,8 @@ impl Tilemap {
           };
           let mut result = None;
           for i in tile_up_y..=tile_down_y {
-            if i >= 0 && i < self.height as i32 && self.data[tilemap_entered_x + i as usize * self.width].idx() != 0 {
+            let tile_idx = tilemap_entered_x + i as usize * self.width;
+            if i >= 0 && i < self.height as i32 && Self::is_tile_colliding(self.collision_data[tile_idx], in_pipe) {
               let left_x = {
                 if movement.x < ZERO {
                   entered_x + 1
@@ -324,6 +340,17 @@ impl Tilemap {
     return Collision {
       x_seam,
       y_seam,
+    }
+  }
+
+  fn is_tile_colliding(tile: CollideTileType, in_pipe: bool) -> bool {
+    match tile {
+      CollideTileType::Pass => in_pipe,
+      CollideTileType::Solid => true,
+      CollideTileType::LWall => true,
+      CollideTileType::RWall => true,
+      CollideTileType::Pipe => false,
+      CollideTileType::PipeSolid => !in_pipe,
     }
   }
 }
