@@ -20,8 +20,9 @@ use agb_ext::{
     tiles::Tilemap,
     math::PosNum,
     camera::Camera,
+    collision::{ControllableEntity, Entity},
 };
-use crate::player::{Player, GramblePipe, Controllable};
+use crate::player::{Player, GramblePipe};
 
 pub mod tileset {
     include!(concat!(env!("OUT_DIR"), "/tileset.rs"));
@@ -41,39 +42,6 @@ pub mod sounds {
 
     static TITLE_DATA: &[u8] = include_wav!("sound/Title.wav");
     pub static TITLE: Music = Music::new(TITLE_DATA, const_num_u32(7,125));
-}
-
-fn move_and_collide(movement: Vector2D<PosNum>, hitbox: Rect<PosNum>, tilemap: &Tilemap, in_pipe: bool) -> Vector2D<PosNum> {
-    let tile_collisions = tilemap.get_collision_seams(movement, hitbox, in_pipe);
-    let (x_collision, y_collision) = tile_collisions.slide_corners();
-    let mut actual = movement.clone();
-    if let Some(x_collision) = x_collision {
-        let desired_x = {
-            let mut value = PosNum::new(x_collision);
-            if movement.x > PosNum::new(0) {
-                value -= hitbox.size.x;
-            }
-            value
-        };
-        actual.x = desired_x - hitbox.position.x;
-    }
-    if let Some(y_collision) = y_collision {
-        let desired_y = {
-            let mut value = PosNum::new(y_collision);
-            if movement.y > PosNum::new(0) {
-                value -= hitbox.size.y;
-            }
-            value
-        };
-        actual.y = desired_y - hitbox.position.y;
-    }
-
-    actual
-}
-
-fn physics_process(player: &mut dyn Controllable, tilemap: &Tilemap, input: Option<&ButtonController>, in_pipe: bool) {
-    let player_movement = player.propose_movement(input);
-    player.move_by(move_and_collide(player_movement, player.col_rect(), tilemap, in_pipe));
 }
 
 type OpacityNum = Num<u8, 4>;
@@ -123,7 +91,7 @@ fn main(mut gba: agb::Gba) -> ! {
     let mut gramble = Player::gramble(&object, (48, 96).into());
     let mut glyde = Player::glyde(&object, (16, 16).into());
     let mut gramble_pipe = GramblePipe::new(&object, (19 * 16, 32).into());
-    glyde.hide_sprite();
+    //glyde.hide_sprite();
     let mut playing_gramble = true;
 
     let mut camera = Camera::new();
@@ -145,9 +113,10 @@ fn main(mut gba: agb::Gba) -> ! {
     loop {
         let gramble_input = if playing_gramble {Some(&input)} else {None};
         let glyde_input = if !playing_gramble {Some(&input)} else {None};
-        physics_process(&mut gramble, &tilemap, gramble_input, false);
-        physics_process(&mut glyde, &tilemap, glyde_input, false);
-        physics_process(&mut gramble_pipe, &tilemap, Some(&input), true);
+        let collide_tilemap = tilemap.clone().into();
+        gramble.physics_process(&collide_tilemap, gramble_input);
+        glyde.physics_process(&collide_tilemap, glyde_input);
+        gramble_pipe.physics_process(&collide_tilemap, Some(&input));
 
         if input.is_just_pressed(Button::L) {
             playing_gramble = !playing_gramble;

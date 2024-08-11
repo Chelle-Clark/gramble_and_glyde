@@ -10,6 +10,7 @@ use agb_ext::{
   math::{PosNum, ZERO, const_num_i32},
   anim::AnimPlayer,
   camera::Camera,
+  collision::{Entity, ControllableEntity, CollisionLayer},
 };
 
 #[derive(Copy, Clone, PartialEq)]
@@ -78,14 +79,6 @@ mod glyde_sprites {
 enum PlayerType {
   Gramble,
   Glyde,
-}
-
-pub trait Controllable {
-  fn propose_movement(&mut self, input: Option<&ButtonController>) -> Vector2D<PosNum>;
-  fn move_by(&mut self, offset: Vector2D<PosNum>);
-  fn set_position(&mut self, position: Vector2D<PosNum>);
-  fn position(&self) -> Vector2D<PosNum>;
-  fn col_rect(&self) -> Rect<PosNum>;
 }
 
 pub struct Player<'obj> {
@@ -169,7 +162,31 @@ impl<'obj> Player<'obj> {
   }
 }
 
-impl<'obj> Controllable for Player<'obj> {
+impl<'obj> Entity for Player<'obj> {
+  fn move_by(&mut self, offset: Vector2D<PosNum>) {
+    self.on_ground = self.velocity.y > ZERO && offset.y == ZERO;
+    self.velocity = offset;
+    self.set_position(self.position + offset);
+  }
+
+  fn set_position(&mut self, position: Vector2D<PosNum>) {
+    self.position = position;
+  }
+
+  fn position(&self) -> Vector2D<PosNum> {
+    self.position
+  }
+
+  fn col_rect(&self) -> Rect<PosNum> {
+    Rect::new(self.position + self.col_rect.position, self.col_rect.size)
+  }
+
+  fn col_layer(&self) -> CollisionLayer {
+    CollisionLayer::Normal
+  }
+}
+
+impl<'obj> ControllableEntity for Player<'obj> {
   fn propose_movement(&mut self, input: Option<&ButtonController>) -> Vector2D<PosNum> {
     let (max_velocity, jump_impulse) = match self.player_type {
       PlayerType::Gramble => (Self::GRAMBLE_MAX_VEL, Self::jump_impulse(Self::GRAMBLE_MAX_HEIGHT)),
@@ -228,24 +245,6 @@ impl<'obj> Controllable for Player<'obj> {
 
     self.velocity
   }
-
-  fn move_by(&mut self, offset: Vector2D<PosNum>) {
-    self.on_ground = self.velocity.y > ZERO && offset.y == ZERO;
-    self.velocity = offset;
-    self.set_position(self.position + offset);
-  }
-
-  fn set_position(&mut self, position: Vector2D<PosNum>) {
-    self.position = position;
-  }
-
-  fn position(&self) -> Vector2D<PosNum> {
-    self.position
-  }
-
-  fn col_rect(&self) -> Rect<PosNum> {
-    Rect::new(self.position + self.col_rect.position, self.col_rect.size)
-  }
 }
 
 
@@ -270,18 +269,7 @@ impl<'obj> GramblePipe<'obj> {
 
 const PIPE_MOVE_SPEED: PosNum = const_num_i32(3,5);
 
-impl<'obj> Controllable for GramblePipe<'obj> {
-  fn propose_movement(&mut self, input: Option<&ButtonController>) -> Vector2D<PosNum> {
-    if let Some(input) = input {
-      let x_tri = input.x_tri();
-      let y_tri = input.y_tri();
-
-      Vector2D::new(PosNum::new(x_tri as i32) * PIPE_MOVE_SPEED, PosNum::new(y_tri as i32) * PIPE_MOVE_SPEED)
-    } else {
-      Vector2D::new(ZERO, ZERO)
-    }
-  }
-
+impl<'obj> Entity for GramblePipe<'obj> {
   fn move_by(&mut self, offset: Vector2D<PosNum>) {
     self.set_position(self.position + offset);
   }
@@ -296,5 +284,22 @@ impl<'obj> Controllable for GramblePipe<'obj> {
 
   fn col_rect(&self) -> Rect<PosNum> {
     Rect::new(self.position, (16, 16).into())
+  }
+
+  fn col_layer(&self) -> CollisionLayer {
+    CollisionLayer::Pipe
+  }
+}
+
+impl<'obj> ControllableEntity for GramblePipe<'obj> {
+  fn propose_movement(&mut self, input: Option<&ButtonController>) -> Vector2D<PosNum> {
+    if let Some(input) = input {
+      let x_tri = input.x_tri();
+      let y_tri = input.y_tri();
+
+      Vector2D::new(PosNum::new(x_tri as i32) * PIPE_MOVE_SPEED, PosNum::new(y_tri as i32) * PIPE_MOVE_SPEED)
+    } else {
+      Vector2D::new(ZERO, ZERO)
+    }
   }
 }

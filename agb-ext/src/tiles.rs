@@ -8,6 +8,7 @@ use agb::{display::{
 use crate::{
   math::{PosNum, ZERO, MIN_INC},
   camera::Camera,
+  collision::{CollideTileType, CollideTilemap},
 };
 
 #[derive(Clone, Copy)]
@@ -16,16 +17,6 @@ pub enum FlipTile<I> {
   X(I),
   Y(I),
   XY(I),
-}
-
-#[derive(Clone, Copy)]
-pub enum CollideTileType {
-  Pass,
-  Solid,
-  LWall,
-  RWall,
-  Pipe,
-  PipeSolid,
 }
 
 #[derive(Clone, Copy)]
@@ -42,7 +33,7 @@ pub struct TileSetData {
   pub tile_data: &'static TileData,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Copy)]
 pub struct Tilemap {
   data: &'static [FlipTile<u8>],
   background_data: Option<&'static [FlipTile<u8>]>,
@@ -52,19 +43,6 @@ pub struct Tilemap {
   height: usize,
   tileset: &'static TileSet<'static>,
   tileset_data: &'static TileSetData,
-}
-
-#[derive(Clone, Copy, PartialEq)]
-pub enum CollisionType {
-  Some(i32),
-  Corner(i32),
-  None,
-}
-
-#[derive(Clone)]
-pub struct Collision {
-  pub x_seam: CollisionType,
-  pub y_seam: CollisionType,
 }
 
 
@@ -248,199 +226,14 @@ impl Tilemap {
     }
     tile_setting
   }
-
-  pub fn get_collision_seams(&self, movement: Vector2D<PosNum>, hitbox: Rect<PosNum>, in_pipe: bool) -> Collision {
-    let px_per_tile = PosNum::new(16);
-    let entered_x = {
-      let cur_edge = {
-        if movement.x > ZERO {
-          hitbox.position.x + hitbox.size.x - MIN_INC
-        } else {
-          hitbox.position.x
-        }
-      };
-      if (cur_edge / px_per_tile).floor() != ((cur_edge + movement.x) / px_per_tile).floor() {
-        Some(((cur_edge + movement.x) / px_per_tile).floor())
-      } else {
-        None
-      }
-    };
-    let entered_y = {
-      let cur_edge = {
-        if movement.y > ZERO {
-          hitbox.position.y + hitbox.size.y - MIN_INC
-        } else {
-          hitbox.position.y
-        }
-      };
-      if (cur_edge / px_per_tile).floor() != ((cur_edge + movement.y) / px_per_tile).floor() {
-        Some(((cur_edge + movement.y) / px_per_tile).floor())
-      } else {
-        None
-      }
-    };
-
-
-    let y_seam = {
-      if let Some(entered_y) = entered_y {
-        if entered_y >= 0 && entered_y < self.height as i32 {
-          let tilemap_entered_y = entered_y as usize;
-          let (tile_left_x, tile_right_x) = {
-            let left_x = hitbox.position.x + movement.x;
-            let right_x = left_x + hitbox.size.x - MIN_INC;
-            ((left_x / px_per_tile).floor(), (right_x / px_per_tile).floor())
-          };
-          let corner = {
-            if entered_x.is_some() {
-              Some(if movement.x > ZERO {tile_right_x} else {tile_left_x})
-            } else {
-              None
-            }
-          };
-          let mut result = CollisionType::None;
-          for i in tile_left_x..=tile_right_x {
-            let tile_idx = tilemap_entered_y * self.width + i as usize;
-            if i >= 0 && i < self.width as i32 && Self::is_tile_colliding(self.collision_data[tile_idx], in_pipe) {
-              let seam = Self::get_y_seam(self.collision_data[tile_idx], movement.y < ZERO, entered_y);
-              result = {
-                if corner == Some(i) && result == CollisionType::None {
-                  CollisionType::Corner(seam)
-                } else {
-                  CollisionType::Some(seam)
-                }
-              };
-            }
-          }
-          result
-        } else {
-          CollisionType::None
-        }
-      } else {
-        CollisionType::None
-      }
-    };
-    let x_seam = {
-      if let Some(entered_x) = entered_x {
-        if entered_x >= 0 && entered_x < self.width as i32 {
-          let tilemap_entered_x = entered_x as usize;
-          let (tile_up_y, tile_down_y) = {
-            let up_y = hitbox.position.y + movement.y;
-            let down_y = up_y + hitbox.size.y - MIN_INC;
-            ((up_y / px_per_tile).floor(), (down_y / px_per_tile).floor())
-          };
-          let corner = {
-            if entered_y.is_some() {
-              Some(if movement.y > ZERO {tile_down_y} else {tile_up_y})
-            } else {
-              None
-            }
-          };
-          let mut result = CollisionType::None;
-          for i in tile_up_y..=tile_down_y {
-            let tile_idx = tilemap_entered_x + i as usize * self.width;
-            if i >= 0 && i < self.height as i32 && Self::is_tile_colliding(self.collision_data[tile_idx], in_pipe) {
-              let seam = Self::get_x_seam(self.collision_data[tile_idx], movement.x < ZERO, entered_x);
-              result = {
-                if corner == Some(i) && result == CollisionType::None {
-                  CollisionType::Corner(seam)
-                } else {
-                  CollisionType::Some(seam)
-                }
-              };
-            }
-          }
-          result
-        } else {
-          CollisionType::None
-        }
-      } else {
-        CollisionType::None
-      }
-    };
-
-    return Collision {
-      x_seam,
-      y_seam,
-    }
-  }
-
-  fn is_tile_colliding(tile: CollideTileType, in_pipe: bool) -> bool {
-    match tile {
-      CollideTileType::Pass => in_pipe,
-      CollideTileType::Solid => true,
-      CollideTileType::LWall => {
-        // let pos = Vector2D::new(PosNum::new(pos.x * 16), PosNum::new(pos.y * 16));
-        // let self_rect = Rect::new(pos, (2, 16));
-        // adjusted_hitbox.touches(self_rect)
-        true
-      },
-      CollideTileType::RWall => {
-        // let pos = Vector2D::new(PosNum::new(pos.x * 16 + 14), PosNum::new(pos.y * 16));
-        // let self_rect = Rect::new(pos, (2, 16));
-        // adjusted_hitbox.touches(self_rect)
-        true
-      },
-      CollideTileType::Pipe => false,
-      CollideTileType::PipeSolid => !in_pipe,
-    }
-  }
-
-  fn get_x_seam(tile: CollideTileType, moving_left: bool, entered_x: i32) -> i32 {
-    match tile {
-      // CollideTileType::LWall => {
-      //   if movement.x < ZERO {
-      //     entered_x * 16 + 2
-      //   } else {
-      //     entered_x * 16
-      //   }
-      // },
-      // CollideTileType::RWall => {
-      //   if movement.x < ZERO {
-      //     (entered_x + 1) * 16
-      //   } else {
-      //     entered_x * 16 + 14
-      //   }
-      // },
-      _ => {
-        if moving_left {
-          (entered_x + 1)  * 16
-        } else {
-          entered_x * 16
-        }
-      }
-    }
-  }
-
-  fn get_y_seam(tile: CollideTileType, moving_up: bool, entered_y: i32) -> i32 {
-    match tile {
-      _ => {
-        if moving_up {
-          (entered_y + 1)  * 16
-        } else {
-          entered_y * 16
-        }
-      }
-    }
-  }
 }
 
-impl CollisionType {
-  pub fn take(self) -> Option<i32> {
-    match self {
-      Self::Some(seam) => Some(seam),
-      Self::Corner(seam) => Some(seam),
-      Self::None => None,
-    }
-  }
-}
-
-impl Collision {
-  pub fn slide_corners(self) -> (Option<i32>, Option<i32>) {
-    match (self.x_seam, self.y_seam) {
-      (CollisionType::Corner(_), CollisionType::Some(y)) => (None, Some(y)),
-      (CollisionType::Some(x), CollisionType::Corner(_)) => (Some(x), None),
-      (CollisionType::Corner(_), CollisionType::Corner(y)) => (None, Some(y)),
-      _ => (self.x_seam.take(), self.y_seam.take()),
+impl Into<CollideTilemap> for Tilemap {
+  fn into(self) -> CollideTilemap {
+    CollideTilemap {
+      data: self.collision_data,
+      width: self.width,
+      height: self.height,
     }
   }
 }

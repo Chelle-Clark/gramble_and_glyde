@@ -200,7 +200,10 @@ mod tiled_export {
     writeln!(
       &mut writer,
       r#"
-      use agb_ext::tiles::{{Tilemap, FlipTile, CollideTileType as C}};
+      use agb_ext::{{
+        tiles::{{Tilemap, FlipTile}},
+        collision::CollideTileType as C,
+      }};
       use crate::tileset;
 
       pub static TILEMAP: Tilemap = Tilemap::new(&DATA, {background_data}, {foreground_data}, &COLLISION, {map_w}, &tileset::TILESET_DATA);
