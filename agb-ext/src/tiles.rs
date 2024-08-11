@@ -217,14 +217,18 @@ impl Tilemap {
   }
 
   fn flipped_tile_settings(tile_settings: &[TileSetting], tile_idx: FlipTile<usize>) -> TileSetting {
-    let mut tile_setting = tile_settings[tile_idx.idx()];
-    if tile_idx.x_flipped() {
-      tile_setting = tile_setting.hflip(true);
+    if tile_idx.idx() > 0 {
+      let mut tile_setting = tile_settings[tile_idx.idx() - 1];
+      if tile_idx.x_flipped() {
+        tile_setting = tile_setting.hflip(true);
+      }
+      if tile_idx.y_flipped() {
+        tile_setting = tile_setting.vflip(true);
+      }
+      tile_setting
+    } else {
+      TileSetting::BLANK
     }
-    if tile_idx.y_flipped() {
-      tile_setting = tile_setting.vflip(true);
-    }
-    tile_setting
   }
 }
 

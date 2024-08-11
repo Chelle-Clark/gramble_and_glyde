@@ -5,7 +5,8 @@ use tiled_export::{export_level, export_tileset};
 
 const LEVELS: &[&str] = &[
   "grambles_room",
-  "single_screen_demo"
+  "single_screen_demo",
+  "slope_test",
 ];
 
 fn main() -> std::io::Result<()> {
@@ -116,7 +117,7 @@ mod tiled_export {
   fn get_tile_id(tile: Option<&LayerTileData>) -> DeserializedFlipTile {
     if let Some(tile) = tile {
       DeserializedFlipTile {
-        tile_id: tile.id(),
+        tile_id: tile.id() + 1,
         suffix: "",
         flip: get_flip_str(tile),
       }
@@ -235,7 +236,13 @@ mod tiled_export {
       1 => "LWall",
       2 => "RWall",
       3 => "Pipe",
+      4 => "RSteepSlope",
+      5 => "RLowSlope1",
+      6 => "RLowSlope2",
       7 => "PipeSolid",
+      8 => "LSteepSlope",
+      9 => "LLowSlope1",
+      10 => "LLowSlope2",
       _ => "Pass",
     }
   }

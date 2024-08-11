@@ -1,19 +1,22 @@
 use core::convert::Into;
-use agb::{
-  fixnum::{Vector2D, Num, Rect},
-  input::ButtonController,
-};
+use agb::{fixnum::{Vector2D, Num, Rect}, include_wav, input::ButtonController};
 use crate::collision::CollisionLayer::Pipe;
 use crate::math::{PosNum, const_num_i32, ZERO, MIN_INC};
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, PartialEq)]
 pub enum CollideTileType {
   Pass,
   Solid,
   LWall,
   RWall,
   Pipe,
+  RSteepSlope,
+  RLowSlope1,
+  RLowSlope2,
   PipeSolid,
+  LSteepSlope,
+  LLowSlope1,
+  LLowSlope2,
 }
 
 #[derive(Clone, Copy, PartialEq)]
@@ -187,17 +190,20 @@ impl CollideTilemap {
 
 impl CollideTileType {
   pub fn is_nonstandard_hitbox(self) -> bool {
-    match self {
-      Self::LWall => true,
-      Self::RWall => true,
-      _ => false,
-    }
+    [
+      Self::LWall, Self::RWall,
+      Self::LSteepSlope, Self::LLowSlope1, Self::LLowSlope2,
+      Self::RSteepSlope, Self::RLowSlope1, Self::RLowSlope2
+    ].contains(&self)
   }
 
   pub fn is_tile_colliding(self, pos: Vector2D<i32>, adjusted_hitbox: Rect<PosNum>, layer: CollisionLayer) -> bool {
     match self {
       Self::Pass => layer == CollisionLayer::Pipe,
       Self::Solid => true,
+      Self::Pipe => false,
+      Self::PipeSolid => layer == CollisionLayer::Normal,
+
       Self::LWall => {
         let pos = Vector2D::new(PosNum::new(pos.x * 16), PosNum::new(pos.y * 16));
         let self_rect = Rect::new(pos, (2, 16).into());
@@ -208,12 +214,27 @@ impl CollideTileType {
         let self_rect = Rect::new(pos, (2, 16).into());
         adjusted_hitbox.touches(self_rect)
       },
-      Self::Pipe => false,
-      Self::PipeSolid => layer == CollisionLayer::Normal,
+
+      Self::LSteepSlope => {
+        let relative_hitbox = Rect::new(adjusted_hitbox.position - (pos * 16).into(), adjusted_hitbox.size);
+        let corner = Vector2D::new(relative_hitbox.position.x, relative_hitbox.position.y + relative_hitbox.size.y);
+        corner.y > const_num_i32(16,0) - corner.x
+      },
+
+      Self::RSteepSlope => {
+        let relative_hitbox = Rect::new(adjusted_hitbox.position - (pos * 16).into(), adjusted_hitbox.size);
+        let corner = Vector2D::new(relative_hitbox.position.x + relative_hitbox.size.x, relative_hitbox.position.y + relative_hitbox.size.y);
+        corner.y > corner.x
+      },
+
+      Self::LLowSlope1 => true,
+      Self::LLowSlope2 => true,
+      Self::RLowSlope1 => true,
+      Self::RLowSlope2 => true,
     }
   }
 
-  fn specialized_collide(self, pos: Vector2D<i32>, _adjusted_hitbox: Rect<PosNum>, moving_left: bool, _moving_up: bool) -> Collision {
+  fn specialized_collide(self, pos: Vector2D<i32>, adjusted_hitbox: Rect<PosNum>, moving_left: bool, _moving_up: bool) -> Collision {
     match self {
       Self::LWall => Collision {
         x_seam: Some(if moving_left {pos.x * 16 + 2} else {pos.x * 16}),
@@ -223,6 +244,15 @@ impl CollideTileType {
         x_seam: Some(if moving_left {(pos.x + 1) * 16} else {(pos.x + 1) * 16 - 2}),
         y_seam: None,
       },
+
+      Self::LSteepSlope => {
+        let relative_hitbox = Rect::new(adjusted_hitbox.position - (pos * 16).into(), adjusted_hitbox.size);
+        Collision {
+          x_seam: None,
+          y_seam: Some(pos.y + (16 - relative_hitbox.position.x.trunc()))
+        }
+      }
+
       _ => Collision{ x_seam: None, y_seam: None }
     }
   }

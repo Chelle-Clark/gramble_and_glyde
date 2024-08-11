@@ -32,6 +32,10 @@ pub mod single_screen_demo {
     include!(concat!(env!("OUT_DIR"), "/grambles_room.rs"));
 }
 
+pub mod slope_test {
+    include!(concat!(env!("OUT_DIR"), "/slope_test.rs"));
+}
+
 pub mod sounds {
     use agb::fixnum::Num;
     use agb::include_wav;
@@ -89,14 +93,14 @@ fn main(mut gba: agb::Gba) -> ! {
     apply_opacity(opacity, &mut blend);
 
     let mut gramble = Player::gramble(&object, (48, 96).into());
-    let mut glyde = Player::glyde(&object, (16, 16).into());
+    let mut glyde = Player::glyde(&object, (80, 80).into());
     let mut gramble_pipe = GramblePipe::new(&object, (19 * 16, 32).into());
-    //glyde.hide_sprite();
+    glyde.hide_sprite();
     let mut playing_gramble = true;
 
     let mut camera = Camera::new();
 
-    let tilemap: &Tilemap = &single_screen_demo::TILEMAP;
+    let tilemap: &Tilemap = &slope_test::TILEMAP;
     tilemap.load_tileset_palette(&mut vram);
     tilemap.set_camera_limits(&mut camera);
 
