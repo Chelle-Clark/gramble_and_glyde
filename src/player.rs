@@ -52,30 +52,6 @@ mod gramble_sprites {
   }
 }
 
-mod glyde_sprites {
-  use agb::{
-    display::object::{Graphics, Tag},
-  };
-  use agb_ext::{
-    anim::Anim,
-    new_anim,
-  };
-  use super::AnimEnum;
-
-  static GRAPHICS: &Graphics = agb::include_aseprite!("gfx/glyde.aseprite");
-  static IDLE: &Tag = GRAPHICS.tags().get("Idle");
-  static RUN: &Tag = GRAPHICS.tags().get("Run");
-  static RUN_LEADUP: &Tag = GRAPHICS.tags().get("RunLeadup");
-
-  pub fn get_next_anim(anim_enum: AnimEnum) -> Anim<AnimEnum> {
-    match anim_enum {
-      AnimEnum::Idle => new_anim!(IDLE, Some(AnimEnum::Idle), (0, 90), (1, 6), (2, 6), (3, 6)),
-      AnimEnum::RunLeadup => new_anim!(RUN_LEADUP, Some(AnimEnum::Run), (0, 4)),
-      AnimEnum::Run => new_anim!(RUN, Some(AnimEnum::Run), (0, 4), (1, 4), (2, 4), (3, 4), (4, 4), (5, 4), (6, 4)),
-    }
-  }
-}
-
 enum PlayerType {
   Gramble,
   Glyde,
@@ -118,7 +94,7 @@ impl<'obj> Player<'obj> {
 
   pub fn glyde(object: &'obj OamManaged, position: Vector2D<PosNum>) -> Player<'obj> {
     Self::new(
-      AnimPlayer::new(object, glyde_sprites::get_next_anim, AnimEnum::Idle),
+      AnimPlayer::new(object, gramble_sprites::get_next_anim, AnimEnum::Idle),
       position,
       Rect::new((4, 4).into(), (24, 28).into()),
       PlayerType::Glyde)

@@ -65,19 +65,19 @@ fn apply_opacity(opacity: OpacityNum, blend: &mut Blend) {
 #[agb::entry]
 fn main(mut gba: agb::Gba) -> ! {
     let (tiled0, mut vram) = gba.display.video.tiled0();
-    let mut primary = tiled0.background(
+    let primary = tiled0.background(
         Priority::P2,
         RegularBackgroundSize::Background32x32,
         TileFormat::FourBpp,
     );
-    let mut foreground = tiled0.background(
+    let foreground = tiled0.background(
         Priority::P1,
         RegularBackgroundSize::Background32x32,
         TileFormat::FourBpp,
     );
 
     let object = gba.display.object.get_managed();
-    let mut input = agb::input::ButtonController::new();
+    let mut input = ButtonController::new();
     let vblank = agb::interrupt::VBlank::get();
 
     let mut mixer = gba.mixer.mixer(Frequency::Hz32768);
