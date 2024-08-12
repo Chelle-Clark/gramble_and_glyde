@@ -139,9 +139,13 @@ impl<'obj> Player<'obj> {
 }
 
 impl<'obj> Entity for Player<'obj> {
-  fn move_by(&mut self, offset: Vector2D<PosNum>) {
-    self.on_ground = self.velocity.y > ZERO && offset.y == ZERO;
-    self.velocity = offset;
+  fn move_by(&mut self, offset: Vector2D<PosNum>, snap_to_ground: bool) {
+    self.on_ground = self.velocity.y > ZERO && offset.y == ZERO || snap_to_ground;
+    if snap_to_ground {
+      self.velocity = Vector2D::new(offset.x, ZERO);
+    } else {
+      self.velocity = offset;
+    }
     self.set_position(self.position + offset);
   }
 
@@ -246,7 +250,7 @@ impl<'obj> GramblePipe<'obj> {
 const PIPE_MOVE_SPEED: PosNum = const_num_i32(3,5);
 
 impl<'obj> Entity for GramblePipe<'obj> {
-  fn move_by(&mut self, offset: Vector2D<PosNum>) {
+  fn move_by(&mut self, offset: Vector2D<PosNum>, _snap_to_ground: bool) {
     self.set_position(self.position + offset);
   }
 
