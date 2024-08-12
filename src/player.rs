@@ -245,6 +245,10 @@ impl<'obj> GramblePipe<'obj> {
   fn sprite(&mut self) -> &mut Object<'obj> {
     self.anim.sprite_mut()
   }
+
+  pub fn hide_sprite(&mut self) {
+    self.sprite().hide();
+  }
 }
 
 const PIPE_MOVE_SPEED: PosNum = const_num_i32(3,5);

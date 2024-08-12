@@ -28,7 +28,7 @@ pub mod tileset {
     include!(concat!(env!("OUT_DIR"), "/tileset.rs"));
 }
 
-pub mod single_screen_demo {
+pub mod grambles_room {
     include!(concat!(env!("OUT_DIR"), "/grambles_room.rs"));
 }
 
@@ -96,11 +96,12 @@ fn main(mut gba: agb::Gba) -> ! {
     let mut glyde = Player::glyde(&object, (80, 80).into());
     let mut gramble_pipe = GramblePipe::new(&object, (19 * 16, 32).into());
     glyde.hide_sprite();
+    gramble_pipe.hide_sprite();
     let mut playing_gramble = true;
 
     let mut camera = Camera::new();
 
-    let tilemap: &Tilemap = &slope_test::TILEMAP;
+    let tilemap: &Tilemap = &grambles_room::TILEMAP;
     tilemap.load_tileset_palette(&mut vram);
     tilemap.set_camera_limits(&mut camera);
 

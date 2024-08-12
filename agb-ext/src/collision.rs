@@ -151,7 +151,7 @@ impl CollideTilemap {
                 }
               },
               (true, false) => {
-                if tile.is_nonstandard_hitbox() {
+                if tile.is_slope() {
                   let specialized_col = tile.specialized_collide((xi, yi).into(), adjusted_hitbox, moving_left, moving_up);
                   snap_to_ground = specialized_col.snap_to_ground;
                   (x_seam, y_seam) = Self::handle_specialized_collide(specialized_col, x_seam, y_seam, moving_left, moving_up);
@@ -161,7 +161,7 @@ impl CollideTilemap {
                 }
               },
               (false, true) => {
-                if tile.is_nonstandard_hitbox() {
+                if tile.is_slope() {
                   let specialized_col = tile.specialized_collide((xi, yi).into(), adjusted_hitbox, moving_left, moving_up);
                   snap_to_ground = specialized_col.snap_to_ground;
                   (x_seam, y_seam) = Self::handle_specialized_collide(specialized_col, x_seam, y_seam, moving_left, moving_up);
@@ -216,8 +216,16 @@ impl CollideTilemap {
 
 impl CollideTileType {
   pub fn is_nonstandard_hitbox(self) -> bool {
+    match self {
+      Self::LWall => true,
+      Self::RWall => true,
+      x if x.is_slope() => true,
+      _ => false,
+    }
+  }
+
+  pub fn is_slope(self) -> bool {
     [
-      Self::LWall, Self::RWall,
       Self::LSteepSlope, Self::LLowSlope1, Self::LLowSlope2,
       Self::RSteepSlope, Self::RLowSlope1, Self::RLowSlope2
     ].contains(&self)
