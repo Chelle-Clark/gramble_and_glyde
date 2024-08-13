@@ -1,9 +1,6 @@
-# AGBRS template
+# Gramble & Glyde
 
-## A basic template example for agb projects
-
-This makes getting started with a new project for the Game Boy Advance in rust really simple, by providing
-all the boiler plate files for you.
+A future Metroidvania and current demo of modern GBA game development.
 
 ## Building
 
@@ -49,16 +46,10 @@ or in release mode
 cargo run --release
 ```
 
-## Starting development
+## Building a .gba file for real hardware
 
-You can find the documentation for agb [here](https://docs.rs/agb/latest/agb/).
-
-You may also want to change the package name and version in `Cargo.toml` before you start.
-
-## Shipping a .gba file for real hardware
-
-To make a game run on real hardware, you will need to convert the built file into a file suitable for
-running on the real thing.
+To get the game in a portable format, capable of being run on hardware or in other emulators, you will need to convert 
+the built file into a file suitable for running on the real thing.
 
 First build the binary in release mode using the instructions above, then do the following:
 
