@@ -31,7 +31,7 @@ or in release mode (recommended for the final version to ship to players)
 cargo build --release
 ```
 
-The resulting file will be in `target/thumbv4t-none-eabi/debug/<your game>` or `target/thumbv4t-none-eabi/release/<your game>` depending on
+The resulting file will be in `target/thumbv4t-none-eabi/debug/gramble-and-glyde` or `target/thumbv4t-none-eabi/release/gramble-and-glyde` depending on
 whether you did a release or debug build.
 
 If you have `mgba-qt` in your path, you will be able to run your game with
@@ -54,5 +54,5 @@ the built file into a file suitable for running on the real thing.
 First build the binary in release mode using the instructions above, then do the following:
 
 ```sh
-agb-gbafix target/thumbv4t-none-eabi/release/<your game> -o <your game>.gba
+agb-gbafix target/thumbv4t-none-eabi/release/gramble-and-glyde -o gramble-and-glyde.gba
 ```
