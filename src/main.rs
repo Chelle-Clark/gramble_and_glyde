@@ -4,8 +4,12 @@
 #![cfg_attr(test, reexport_test_harness_main = "test_main")]
 #![cfg_attr(test, test_runner(agb::test_runner::test_runner))]
 
-mod player;
+extern crate alloc;
 
+mod player;
+mod object;
+
+use alloc::vec::Vec;
 use agb::{
     display::{
         Priority,
@@ -23,6 +27,7 @@ use agb_ext::{
     collision::{ControllableEntity, Entity},
 };
 use crate::player::{Player, GramblePipe};
+use crate::object::GameObject;
 
 pub mod tileset {
     include!(concat!(env!("OUT_DIR"), "/tileset.rs"));
@@ -99,6 +104,8 @@ fn main(mut gba: agb::Gba) -> ! {
     gramble_pipe.hide_sprite();
     let mut playing_gramble = true;
 
+    let mut game_objects: Vec<GameObject> = grambles_room::objects();
+
     let mut camera = Camera::new();
 
     let tilemap: &Tilemap = &grambles_room::TILEMAP;
@@ -130,15 +137,9 @@ fn main(mut gba: agb::Gba) -> ! {
         let player = if playing_gramble { &gramble } else { &glyde };
         camera.smoothed_center_on(player.position());
 
-        if input.is_pressed(Button::R) {
-            if opacity > opacity_num::ZERO {
-                opacity -= opacity_num::MIN_INC;
-            }
-        } else {
-            opacity += opacity_num::MIN_INC;
+        for game_object in game_objects.iter_mut() {
+            game_object.frame(&player, &mut blend);
         }
-        opacity = opacity.clamp(opacity_num::ZERO, opacity_num::ONE);
-        apply_opacity(opacity, &mut blend);
 
         if input.is_just_pressed(Button::START) {
             break;
