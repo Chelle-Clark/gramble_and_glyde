@@ -21,8 +21,8 @@ fn main() -> std::io::Result<()> {
 }
 
 mod tiled_export {
-  use std::fmt::{Display, Formatter};
-  use tiled::{Loader, LayerType, TileLayer, LayerTileData, TileId};
+  use std::fmt::{Display, format, Formatter};
+  use tiled::{Loader, LayerType, TileLayer, LayerTileData, TileId, ObjectShape};
   use std::fs::File;
   use std::io::{BufWriter, Result, Write};
 
@@ -140,6 +140,7 @@ mod tiled_export {
 
     let mut has_background = false;
     let mut has_foreground = false;
+    let mut has_objects = false;
     for layer in map.layers() {
       let layer_name = layer.name.clone();
       match layer.layer_type() {
@@ -186,8 +187,25 @@ mod tiled_export {
             }
           }
         },
-        LayerType::Objects(_) => {
+        LayerType::Objects(obj_layer) => {
+          write!(&mut writer, "const OBJECTS: &[O] = &[")?;
+          for obj in obj_layer.objects() {
+            write!(&mut writer, "O::{},", match obj.user_type.as_str() {
+              "ForegroundHide" => rect_object(&obj),
+              _ => panic!("Unexpected type {}", obj.user_type),
+            })?;
+            writeln!(&mut writer, "];")?;
 
+            writeln!(&mut writer, r#"
+                  pub fn objects() -> Vec<GameObject> {{
+                    let mut object_vec = vec![];
+                    for object in OBJECTS {{
+                      object_vec.push(object.build());
+                    }}
+                    object_vec
+                  }}
+                "#)?;
+          }
         },
         _ => {
 
@@ -201,13 +219,16 @@ mod tiled_export {
     writeln!(
       &mut writer,
       r#"
+      use alloc::{{vec, vec::Vec}};
       use agb_ext::{{
         tiles::{{Tilemap, FlipTile}},
         collision::CollideTileType as C,
       }};
       use crate::tileset;
+      use crate::object::{{ObjectInit as O, GameObject}};
 
       pub static TILEMAP: Tilemap = Tilemap::new(&DATA, {background_data}, {foreground_data}, &COLLISION, {map_w}, &tileset::TILESET_DATA);
+
       "#
     )?;
 
@@ -245,5 +266,17 @@ mod tiled_export {
       10 => "LLowSlope2",
       _ => "Pass",
     }
+  }
+
+  fn rect_object(obj: &tiled::ObjectData) -> String {
+    let (width, height) = {
+      if let ObjectShape::Rect{width, height} = obj.shape {
+        (width, height)
+      } else {
+        panic!("Object of type {} must be a Rect", obj.user_type)
+      }
+    };
+
+    format!("{}({},{},{},{})", obj.user_type, obj.x, obj.y, width, height)
   }
 }
