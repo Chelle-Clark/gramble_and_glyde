@@ -35,7 +35,7 @@ mod gramble_sprites {
 
   pub fn get_next_anim(anim_enum: AnimEnum) -> Anim<AnimEnum> {
     match anim_enum {
-      AnimEnum::Idle => new_anim!(IDLE, Some(AnimEnum::Idle), (0, 60)),
+      AnimEnum::Idle => new_anim!(IDLE, Some(AnimEnum::Idle), (0, 30), (1, 5), (2, 5), (3, 30), (2, 5), (1, 5)),
       AnimEnum::RunLeadup => new_anim!(IDLE, Some(AnimEnum::Run), (0, 60)),
       AnimEnum::Run => new_anim!(IDLE, Some(AnimEnum::Run), (0, 60)),
     }
