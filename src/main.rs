@@ -8,6 +8,7 @@ extern crate alloc;
 
 mod player;
 mod object;
+mod world;
 
 use alloc::vec::Vec;
 use agb::{
@@ -19,15 +20,17 @@ use agb::{
     fixnum::{Vector2D, Rect, Num},
     input::{Button, ButtonController},
 };
+use agb::fixnum::num;
 use agb::sound::mixer::{Frequency, SoundChannel};
 use agb_ext::{
     tiles::Tilemap,
     math::PosNum,
     camera::Camera,
-    collision::{ControllableEntity, Entity},
+    collision::{ControllableEntity, Entity, Pos, Vel, Acc},
 };
 use crate::player::{Player, GramblePipe};
 use crate::object::GameObject;
+use crate::world::{World, WorldSetter};
 
 pub mod tileset {
     include!(concat!(env!("OUT_DIR"), "/tileset.rs"));
@@ -80,6 +83,13 @@ fn main(mut gba: agb::Gba) -> ! {
         RegularBackgroundSize::Background32x32,
         TileFormat::FourBpp,
     );
+
+    let mut world = World::new();
+    world.build_entity()
+      .set(Pos(Vector2D::new(0.into(), 0.into())))
+      .set(Vel(Vector2D::new(2.into(), 0.into())))
+      .set(Acc(Vector2D::new(0.into(), num!(0.1))))
+      .build();
 
     let object = gba.display.object.get_managed();
     let mut input = ButtonController::new();
@@ -150,6 +160,7 @@ fn main(mut gba: agb::Gba) -> ! {
         glyde.draw(&camera, &object, glyde_input);
         primary.set_pos(&mut vram, camera.position().trunc());
         foreground.set_pos(&mut vram, camera.position().trunc());
+        world.frame();
 
         vblank.wait_for_vblank();
         primary.commit(&mut vram);

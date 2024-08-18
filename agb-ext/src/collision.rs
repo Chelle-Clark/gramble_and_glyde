@@ -2,6 +2,7 @@ use core::convert::Into;
 use agb::{fixnum::{Vector2D, Num, Rect}, include_wav, input::ButtonController};
 use crate::collision::CollisionLayer::Pipe;
 use crate::math::{PosNum, const_num_i32, ZERO, MIN_INC};
+use crate::ecs::Entity as EcsEntity;
 
 #[derive(Clone, Copy, PartialEq)]
 pub enum CollideTileType {
@@ -23,6 +24,11 @@ pub enum CollideTileType {
 pub enum CollisionLayer {
   Normal, Pipe
 }
+
+pub struct Pos(pub Vector2D<PosNum>);
+pub struct Vel(pub Vector2D<PosNum>);
+pub struct Acc(pub Vector2D<PosNum>);
+pub struct Size(pub Vector2D<PosNum>);
 
 #[derive(Clone)]
 pub struct Collision {
@@ -54,6 +60,23 @@ pub trait ControllableEntity: Entity {
     let hitbox = self.col_rect();
     let col = tilemap.get_collision_seams(movement, hitbox, self.col_layer());
     self.move_by(move_and_collide(movement, hitbox, &col), col.snap_to_ground);
+  }
+}
+
+
+pub mod system {
+  use super::*;
+
+  pub fn apply_vel(pos: &mut Pos, vel: &Vel) {
+    pos.0 = pos.0 + vel.0;
+  }
+
+  pub fn apply_acc(vel: &mut Vel, acc: &Acc) {
+    vel.0 = vel.0 + acc.0;
+  }
+
+  pub fn print_pos(en: &EcsEntity, pos: &Pos) {
+    agb::println!("{:?}: {:?}", en, pos.0);
   }
 }
 
