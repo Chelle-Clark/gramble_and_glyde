@@ -10,15 +10,16 @@ use agb_ext::{
   math::{PosNum, ZERO, const_num_i32},
   anim::AnimPlayer,
   camera::Camera,
-  collision::{Entity, ControllableEntity, CollisionLayer},
+  collision::{Entity, ControllableEntity, CollisionLayer, Acc, OnGround, Pos, Size, Vel},
+  ecs::Entity as EcsEntity,
+  anim_enum
 };
 
-#[derive(Copy, Clone, PartialEq)]
-enum AnimEnum {
-  Idle,
-  RunLeadup,
-  Run,
-}
+anim_enum!(AnimEnum {
+  Idle => 0,
+  RunLeadup => 1,
+  Run => 2
+});
 
 mod gramble_sprites {
   use agb::{
@@ -28,16 +29,17 @@ mod gramble_sprites {
     anim::Anim,
     new_anim,
   };
+  use agb_ext::anim::AnimId;
   use super::AnimEnum;
 
   static GRAPHICS: &Graphics = agb::include_aseprite!("gfx/gramble.aseprite");
   static IDLE: &Tag = GRAPHICS.tags().get("Idle");
 
-  pub fn get_next_anim(anim_enum: AnimEnum) -> Anim<AnimEnum> {
-    match anim_enum {
-      AnimEnum::Idle => new_anim!(IDLE, Some(AnimEnum::Idle), (0, 30), (1, 5), (2, 5), (3, 30), (2, 5), (1, 5)),
-      AnimEnum::RunLeadup => new_anim!(IDLE, Some(AnimEnum::Run), (0, 60)),
-      AnimEnum::Run => new_anim!(IDLE, Some(AnimEnum::Run), (0, 60)),
+  pub fn get_next_anim(anim_enum: AnimId) -> Anim {
+    match anim_enum.into() {
+      AnimEnum::Idle => new_anim!(IDLE, Some(AnimEnum::Idle.into()), (0, 30), (1, 5), (2, 5), (3, 30), (2, 5), (1, 5)),
+      AnimEnum::RunLeadup => new_anim!(IDLE, Some(AnimEnum::Run.into()), (0, 60)),
+      AnimEnum::Run => new_anim!(IDLE, Some(AnimEnum::Run.into()), (0, 60)),
     }
   }
 
@@ -46,8 +48,8 @@ mod gramble_sprites {
     static GRAPHICS: &Graphics = agb::include_aseprite!("gfx/gramble_pipe.aseprite");
     static IDLE: &Tag = GRAPHICS.tags().get("Idle");
 
-    pub fn get_next_anim(anim_enum: AnimEnum) -> Anim<AnimEnum> {
-      new_anim!(IDLE, Some(AnimEnum::Idle), (0, 60))
+    pub fn get_next_anim(anim_enum: AnimId) -> Anim {
+      new_anim!(IDLE, Some(AnimEnum::Idle.into()), (0, 60))
     }
   }
 }
@@ -58,7 +60,7 @@ enum PlayerType {
 }
 
 pub struct Player<'obj> {
-  anim: AnimPlayer<'obj, AnimEnum>,
+  anim: AnimPlayer<'obj>,
   position: Vector2D<PosNum>,
   velocity: Vector2D<PosNum>,
 
@@ -68,7 +70,7 @@ pub struct Player<'obj> {
 }
 
 pub struct GramblePipe<'obj> {
-  anim: AnimPlayer<'obj, AnimEnum>,
+  anim: AnimPlayer<'obj>,
   position: Vector2D<PosNum>,
 }
 
@@ -86,7 +88,7 @@ impl<'obj> Player<'obj> {
 
   pub fn gramble(object: &'obj OamManaged, position: Vector2D<PosNum>) -> Player<'obj> {
     Self::new(
-      AnimPlayer::new(object, gramble_sprites::get_next_anim, AnimEnum::Idle),
+      AnimPlayer::new(object, gramble_sprites::get_next_anim, AnimEnum::Idle.into()),
       position,
       Rect::new((1, 4).into(), (14, 28).into()),
       PlayerType::Gramble)
@@ -94,13 +96,13 @@ impl<'obj> Player<'obj> {
 
   pub fn glyde(object: &'obj OamManaged, position: Vector2D<PosNum>) -> Player<'obj> {
     Self::new(
-      AnimPlayer::new(object, gramble_sprites::get_next_anim, AnimEnum::Idle),
+      AnimPlayer::new(object, gramble_sprites::get_next_anim, AnimEnum::Idle.into()),
       position,
       Rect::new((4, 4).into(), (24, 28).into()),
       PlayerType::Glyde)
   }
 
-  fn new(anim: AnimPlayer<'obj, AnimEnum>, position: Vector2D<PosNum>, col_rect: Rect<PosNum>, player_type: PlayerType) -> Player<'obj> {
+  fn new(anim: AnimPlayer<'obj>, position: Vector2D<PosNum>, col_rect: Rect<PosNum>, player_type: PlayerType) -> Player<'obj> {
     let mut player = Player {
       anim,
       position: (0, 0).into(),
@@ -121,11 +123,11 @@ impl<'obj> Player<'obj> {
 
   pub fn draw(&mut self, camera: &Camera, object: &'obj OamManaged, input: Option<&ButtonController>) {
     if input.map(|input| input.x_tri() != Tri::Zero) == Some(true) {
-      if self.anim.cur_anim() != AnimEnum::Run {
-        self.anim.set_anim(AnimEnum::RunLeadup, object);
+      if self.anim.cur_anim() != AnimEnum::Run.into() {
+        self.anim.set_anim(AnimEnum::RunLeadup.into(), object);
       }
     } else {
-      self.anim.set_anim(AnimEnum::Idle, object);
+      self.anim.set_anim(AnimEnum::Idle.into(), object);
     }
 
     let sprite_position = (self.position - camera.position()).trunc();
@@ -231,7 +233,7 @@ impl<'obj> ControllableEntity for Player<'obj> {
 impl<'obj> GramblePipe<'obj> {
   pub fn new(object: &'obj OamManaged, position: Vector2D<PosNum>) -> Self {
     Self {
-      anim: AnimPlayer::new(object, gramble_sprites::pipe::get_next_anim, AnimEnum::Idle),
+      anim: AnimPlayer::new(object, gramble_sprites::pipe::get_next_anim, AnimEnum::Idle.into()),
       position
     }
   }
