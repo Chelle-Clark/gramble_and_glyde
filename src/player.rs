@@ -79,6 +79,8 @@ fn jump_impulse(max_height: PosNum) -> PosNum {
 }
 
 pub fn gramble<'obj>(world: &mut World<'obj>, object: &'obj OamManaged<'obj>, position: Vector2D<PosNum>) -> EcsEntity {
+  let mut anim_player = AnimPlayer::new(object, gramble_sprites::get_next_anim, AnimEnum::Idle.into());
+  anim_player.sprite_mut().set_priority(Priority::P2);
   world.build_entity()
     .set(Pos(position))
     .set(Vel(Vector2D::new(ZERO, ZERO)))
@@ -87,7 +89,7 @@ pub fn gramble<'obj>(world: &mut World<'obj>, object: &'obj OamManaged<'obj>, po
     .set(OnGround(false))
     .set(CollisionLayer::Normal)
     .set(PlayerType::Gramble)
-    .set(AnimPlayer::new(object, gramble_sprites::get_next_anim, AnimEnum::Idle.into()))
+    .set(anim_player)
     .set(AnimOffset((1, 4).into()))
     .entity()
 }
