@@ -197,10 +197,10 @@ mod tiled_export {
             writeln!(&mut writer, "];")?;
 
             writeln!(&mut writer, r#"
-                  pub fn objects() -> Vec<GameObject> {{
+                  pub fn load_objects(world: &mut World) -> Vec<Entity> {{
                     let mut object_vec = vec![];
                     for object in OBJECTS {{
-                      object_vec.push(object.build());
+                      object_vec.push(object.build(world));
                     }}
                     object_vec
                   }}
@@ -223,9 +223,11 @@ mod tiled_export {
       use agb_ext::{{
         tiles::{{Tilemap, FlipTile}},
         collision::CollideTileType as C,
+        ecs::Entity,
       }};
       use crate::tileset;
-      use crate::object::{{ObjectInit as O, GameObject}};
+      use crate::world::{{World}};
+      use crate::object::{{ObjectInit as O}};
 
       pub static TILEMAP: Tilemap = Tilemap::new(&DATA, {background_data}, {foreground_data}, &COLLISION, {map_w}, &tileset::TILESET_DATA);
 

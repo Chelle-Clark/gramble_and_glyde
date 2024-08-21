@@ -10,3 +10,4 @@ pub mod camera;
 pub mod sound;
 pub mod collision;
 pub mod ecs;
+pub mod blend;

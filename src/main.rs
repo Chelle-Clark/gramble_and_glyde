@@ -28,8 +28,8 @@ use agb_ext::{
     camera::Camera,
     collision::{ControllableEntity, Entity, Pos, Vel, Acc},
 };
+use agb_ext::blend::ManagedBlend;
 use crate::player::{gramble};
-use crate::object::GameObject;
 use crate::world::{World, MutEntityAccessor, HasEntity};
 
 pub mod tileset {
@@ -54,20 +54,6 @@ pub mod sounds {
 
     static TITLE_DATA: &[u8] = include_wav!("sound/Title.wav");
     pub static TITLE: Music = Music::new(TITLE_DATA, const_num_u32(7,125));
-}
-
-type OpacityNum = Num<u8, 4>;
-mod opacity_num {
-    use crate::OpacityNum;
-
-    pub const ZERO: OpacityNum = OpacityNum::from_raw(0);
-    pub const ONE: OpacityNum = OpacityNum::from_raw(1 << 4);
-    pub const MIN_INC: OpacityNum = OpacityNum::from_raw(1);
-}
-
-fn apply_opacity(opacity: OpacityNum, blend: &mut Blend) {
-    blend.set_blend_weight(BlendLayerPriority::Bottom, opacity_num::ONE - opacity);
-    blend.set_blend_weight(BlendLayerPriority::Top, opacity);
 }
 
 #[agb::entry]
@@ -106,12 +92,13 @@ fn main(mut gba: agb::Gba) -> ! {
     blend.set_background_enable(BlendLayerPriority::Bottom, primary.background(), true);
     blend.set_background_enable(BlendLayerPriority::Top, foreground.background(), true);
     blend.set_object_enable(BlendLayerPriority::Bottom, true);
-    let mut opacity = opacity_num::ONE;
-    apply_opacity(opacity, &mut blend);
+    let mut blend = ManagedBlend::new(blend);
 
     let mut gramble = gramble(&mut world, &object, (48, 96).into());
     //let mut glyde = Player::glyde(&object, (80, 80).into());
     //let mut gramble_pipe = GramblePipe::new(&object, (19 * 16, 32).into());
+
+    grambles_room::load_objects(&mut world);
 
     let mut primary = InfiniteScrolledMap::new(primary, tilemap.primary_tile_fn());
     primary.init(&mut vram, (0, 0).into(), &mut || {});
@@ -126,7 +113,7 @@ fn main(mut gba: agb::Gba) -> ! {
     loop {
         primary.set_pos(&mut vram, camera.position().trunc());
         foreground.set_pos(&mut vram, camera.position().trunc());
-        world.frame(&input, &object, &mut camera, &collide_tilemap);
+        world.frame(&input, &object, &mut camera, &collide_tilemap, &mut blend);
 
         vblank.wait_for_vblank();
         primary.commit(&mut vram);

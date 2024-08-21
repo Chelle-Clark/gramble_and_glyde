@@ -9,18 +9,19 @@ use agb_ext::{
   ecs::{Entity},
   anim::{AnimOffset, AnimPlayer, system as anisys},
 };
+use agb_ext::blend::ManagedBlend;
 use agb_ext::camera::Camera;
 use agb_ext::collision::{CollideTilemap, CollisionLayer};
 use agb_ext::tiles::Tilemap;
 use crate::{
-  player::{PlayerType, system as playersys},
+  player::{PlayerType, CurrentPlayer, system as playersys},
+  object::{ForegroundHide, system as objsys}
 };
-use crate::player::CurrentPlayer;
 
-type Map<T> = HashMap<Entity, T>;
+pub type Map<T> = HashMap<Entity, T>;
 type Entities = Map<()>;
 
-type Components<'o> = (Map<Pos>, Map<Vel>, Map<Acc>, Map<Size>, Map<OnGround>, Map<CollisionLayer>, Map<PlayerType>, Map<AnimPlayer<'o>>, Map<AnimOffset>);
+type Components<'o> = (Map<Pos>, Map<Vel>, Map<Acc>, Map<Size>, Map<OnGround>, Map<CollisionLayer>, Map<PlayerType>, Map<AnimPlayer<'o>>, Map<AnimOffset>, Map<ForegroundHide>);
 
 pub struct World<'o> {
   pub(self) components: Components<'o>,
@@ -31,7 +32,7 @@ pub struct World<'o> {
 impl<'o> World<'o> {
   pub fn new() -> Self {
     World {
-      components: (Map::new(),Map::new(),Map::new(),Map::new(),Map::new(),Map::new(),Map::new(),Map::new(),Map::new(),),
+      components: (Map::new(),Map::new(),Map::new(),Map::new(),Map::new(),Map::new(),Map::new(),Map::new(),Map::new(),Map::new(),),
       entities: Map::new(),
       next_entity_id: 0,
     }
@@ -61,7 +62,7 @@ impl<'o> World<'o> {
     }
   }
 
-  pub fn frame(&mut self, input: &ButtonController, object: &'o OamManaged<'o>, camera: &mut Camera, collide_tilemap: &CollideTilemap) {
+  pub fn frame(&mut self, input: &ButtonController, object: &'o OamManaged<'o>, camera: &mut Camera, collide_tilemap: &CollideTilemap, blend: &mut ManagedBlend) {
     for (en, vel) in self.components.1.iter_mut() {
       if let Some(acc) = self.components.2.get(en) {
         colsys::apply_acc(vel, acc);
@@ -93,6 +94,7 @@ impl<'o> World<'o> {
       if let Some(anim) = self.components.7.get_mut(en) {
         playersys::run_anim(player_type, anim, Some(&CurrentPlayer), object, input);
       }
+      objsys::foreground_hide(&CurrentPlayer, en, &self.components.0, &self.components.3, &self.components.9, blend);
     }
   }
 }
@@ -173,3 +175,4 @@ impl_entity_accessor!(CollisionLayer, 5);
 impl_entity_accessor!(PlayerType, 6);
 impl_entity_accessor!(AnimPlayer<'o>, 7);
 impl_entity_accessor!(AnimOffset, 8);
+impl_entity_accessor!(ForegroundHide, 9);
