@@ -25,12 +25,13 @@ pub enum CollisionLayer {
   Normal, Pipe
 }
 
-pub struct Pos(pub Vector2D<PosNum>);
-pub struct Vel(pub Vector2D<PosNum>);
-pub struct Acc(pub Vector2D<PosNum>);
-pub struct Size(pub Vector2D<PosNum>);
+#[derive(Clone, Copy, PartialEq)] pub struct Pos(pub Vector2D<PosNum>);
+#[derive(Clone, Copy, PartialEq)] pub struct Vel(pub Vector2D<PosNum>);
+#[derive(Clone, Copy, PartialEq)] pub struct Acc(pub Vector2D<PosNum>);
+#[derive(Clone, Copy, PartialEq)] pub struct Size(pub Vector2D<PosNum>);
+#[derive(Clone, Copy, PartialEq)] pub struct OnGround(pub bool);
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Collision {
   pub x_seam: Option<i32>,
   pub y_seam: Option<i32>,
@@ -77,6 +78,20 @@ pub mod system {
 
   pub fn print_pos(en: &EcsEntity, pos: &Pos) {
     agb::println!("{:?}: {:?}", en, pos.0);
+  }
+
+  pub fn physics_process(pos: &Pos, vel: &mut Vel, size: &Size, col_layer: &CollisionLayer, on_ground: Option<&mut OnGround>, tilemap: &CollideTilemap) {
+    let hitbox = Rect::new(pos.0, size.0);
+    let col = tilemap.get_collision_seams(vel.0, hitbox, *col_layer);
+    let new_vel = move_and_collide(vel.0, hitbox, &col);
+
+    if vel.0.y > new_vel.y {
+      if let Some(on_ground) = on_ground {
+        on_ground.0 = true;
+      }
+    }
+
+    vel.0 = new_vel;
   }
 }
 

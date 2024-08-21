@@ -6,7 +6,6 @@ use agb_ext::{
   collision::Entity,
   math::PosNum,
 };
-use crate::Player;
 
 #[derive(Copy, Clone)]
 pub enum ObjectInit {
@@ -32,19 +31,19 @@ impl ObjectInit {
 }
 
 impl GameObject {
-  pub fn frame(&mut self, player: &Player, blend: &mut Blend) {
-    match self {
-      Self::ForegroundHide {hitbox, opacity} => {
-        if player.col_rect().touches(*hitbox) {
-          *opacity += Num::from_raw(1);
-        } else if *opacity > Num::from_raw(0) {
-          *opacity -= Num::from_raw(1);
-        }
-        *opacity = *opacity.clamp(&mut Num::from_raw(0), &mut Num::new(1));
-
-        blend.set_blend_weight(Layer::Top, Num::new(1) - *opacity);
-        blend.set_blend_weight(Layer::Bottom, *opacity);
-      }
-    }
-  }
+  // pub fn frame(&mut self, player: &Player, blend: &mut Blend) {
+  //   match self {
+  //     Self::ForegroundHide {hitbox, opacity} => {
+  //       if player.col_rect().touches(*hitbox) {
+  //         *opacity += Num::from_raw(1);
+  //       } else if *opacity > Num::from_raw(0) {
+  //         *opacity -= Num::from_raw(1);
+  //       }
+  //       *opacity = *opacity.clamp(&mut Num::from_raw(0), &mut Num::new(1));
+  // 
+  //       blend.set_blend_weight(Layer::Top, Num::new(1) - *opacity);
+  //       blend.set_blend_weight(Layer::Bottom, *opacity);
+  //     }
+  //   }
+  // }
 }

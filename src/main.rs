@@ -28,9 +28,9 @@ use agb_ext::{
     camera::Camera,
     collision::{ControllableEntity, Entity, Pos, Vel, Acc},
 };
-use crate::player::{Player, GramblePipe};
+use crate::player::{gramble};
 use crate::object::GameObject;
-use crate::world::{World, WorldSetter};
+use crate::world::{World, MutEntityAccessor, HasEntity};
 
 pub mod tileset {
     include!(concat!(env!("OUT_DIR"), "/tileset.rs"));
@@ -84,15 +84,17 @@ fn main(mut gba: agb::Gba) -> ! {
         TileFormat::FourBpp,
     );
 
-    let mut world = World::new();
-    world.build_entity()
-      .set(Pos(Vector2D::new(0.into(), 0.into())))
-      .set(Vel(Vector2D::new(2.into(), 0.into())))
-      .set(Acc(Vector2D::new(0.into(), num!(0.1))))
-      .build();
+    let tilemap: &Tilemap = &grambles_room::TILEMAP;
+    tilemap.load_tileset_palette(&mut vram);
 
-    let object = gba.display.object.get_managed();
     let mut input = ButtonController::new();
+    let object = gba.display.object.get_managed();
+    let mut camera = Camera::new();
+    let mut collide_tilemap = tilemap.clone().into();
+
+    let mut world = World::new();
+    tilemap.set_camera_limits(&mut camera);
+
     let vblank = agb::interrupt::VBlank::get();
 
     let mut mixer = gba.mixer.mixer(Frequency::Hz32768);
@@ -107,20 +109,9 @@ fn main(mut gba: agb::Gba) -> ! {
     let mut opacity = opacity_num::ONE;
     apply_opacity(opacity, &mut blend);
 
-    let mut gramble = Player::gramble(&object, (48, 96).into());
-    let mut glyde = Player::glyde(&object, (80, 80).into());
-    let mut gramble_pipe = GramblePipe::new(&object, (19 * 16, 32).into());
-    glyde.hide_sprite();
-    gramble_pipe.hide_sprite();
-    let mut playing_gramble = true;
-
-    let mut game_objects: Vec<GameObject> = grambles_room::objects();
-
-    let mut camera = Camera::new();
-
-    let tilemap: &Tilemap = &grambles_room::TILEMAP;
-    tilemap.load_tileset_palette(&mut vram);
-    tilemap.set_camera_limits(&mut camera);
+    let mut gramble = gramble(&mut world, &object, (48, 96).into());
+    //let mut glyde = Player::glyde(&object, (80, 80).into());
+    //let mut gramble_pipe = GramblePipe::new(&object, (19 * 16, 32).into());
 
     let mut primary = InfiniteScrolledMap::new(primary, tilemap.primary_tile_fn());
     primary.init(&mut vram, (0, 0).into(), &mut || {});
@@ -133,42 +124,17 @@ fn main(mut gba: agb::Gba) -> ! {
     object.commit();
 
     loop {
-        let gramble_input = if playing_gramble {Some(&input)} else {None};
-        let glyde_input = if !playing_gramble {Some(&input)} else {None};
-        let collide_tilemap = tilemap.clone().into();
-        gramble.physics_process(&collide_tilemap, gramble_input);
-        glyde.physics_process(&collide_tilemap, glyde_input);
-        gramble_pipe.physics_process(&collide_tilemap, Some(&input));
-
-        if input.is_just_pressed(Button::L) {
-            playing_gramble = !playing_gramble;
-        }
-
-        let player = if playing_gramble { &gramble } else { &glyde };
-        camera.smoothed_center_on(player.position());
-
-        for game_object in game_objects.iter_mut() {
-            game_object.frame(&player, &mut blend);
-        }
-
-        if input.is_just_pressed(Button::START) {
-            break;
-        }
-
-        gramble.draw(&camera, &object, gramble_input);
-        gramble_pipe.draw(&camera, &object);
-        glyde.draw(&camera, &object, glyde_input);
         primary.set_pos(&mut vram, camera.position().trunc());
         foreground.set_pos(&mut vram, camera.position().trunc());
-        world.frame();
+        world.frame(&input, &object, &mut camera, &collide_tilemap);
 
         vblank.wait_for_vblank();
         primary.commit(&mut vram);
         foreground.commit(&mut vram);
         blend.commit();
-        input.update();
         mixer.frame();
         object.commit();
+        input.update();
     }
 
     primary.clear(&mut vram);

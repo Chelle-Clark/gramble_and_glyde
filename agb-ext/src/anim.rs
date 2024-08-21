@@ -157,17 +157,24 @@ impl<'o> AnimPlayer<'o> {
 pub struct AnimOffset(pub Vector2D<i32>);
 
 pub mod system {
+  use crate::camera::Camera;
   use crate::collision::Pos;
   use super::*;
 
-  pub fn position_anim<'o>(player: &mut AnimPlayer<'o>, pos: &Pos, anim_offset: Option<&AnimOffset>) {
+  pub fn position_anim<'o>(player: &mut AnimPlayer<'o>, pos: &Pos, anim_offset: Option<&AnimOffset>, camera: &Camera) {
+    let pos = (pos.0 - camera.position()).trunc();
     let pos = {
       if let Some(anim_offset) = anim_offset {
-        pos.0.trunc() - anim_offset.0
+        pos - anim_offset.0
       } else {
-        pos.0.trunc()
+        pos
       }
     };
+
     player.sprite.set_position(pos);
+  }
+
+  pub fn draw<'o>(player: &mut AnimPlayer<'o>, object: &'o OamManaged) {
+    player.draw(object);
   }
 }
