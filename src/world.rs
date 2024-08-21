@@ -89,6 +89,11 @@ impl<'o> World<'o> {
       }
       anisys::draw(player, &object);
     }
+    for (en, player_type) in self.components.6.iter() {
+      if let Some(anim) = self.components.7.get_mut(en) {
+        playersys::run_anim(player_type, anim, Some(&CurrentPlayer), object, input);
+      }
+    }
   }
 }
 
