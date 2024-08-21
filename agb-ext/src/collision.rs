@@ -2,6 +2,7 @@ use core::convert::Into;
 use agb::{fixnum::{Vector2D, Num, Rect}, include_wav, input::ButtonController};
 use crate::collision::CollisionLayer::Pipe;
 use crate::math::{PosNum, const_num_i32, ZERO, MIN_INC};
+use crate::ecs::Entity as EcsEntity;
 
 #[derive(Clone, Copy, PartialEq)]
 pub enum CollideTileType {
@@ -21,10 +22,26 @@ pub enum CollideTileType {
 
 #[derive(Clone, Copy, PartialEq)]
 pub enum CollisionLayer {
-  Normal, Pipe
+  Normal,
+  Pipe,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Copy, PartialEq)]
+pub struct Pos(pub Vector2D<PosNum>);
+
+#[derive(Clone, Copy, PartialEq)]
+pub struct Vel(pub Vector2D<PosNum>);
+
+#[derive(Clone, Copy, PartialEq)]
+pub struct Acc(pub Vector2D<PosNum>);
+
+#[derive(Clone, Copy, PartialEq)]
+pub struct Size(pub Vector2D<PosNum>);
+
+#[derive(Clone, Copy, PartialEq)]
+pub struct OnGround(pub bool);
+
+#[derive(Clone, Debug)]
 pub struct Collision {
   pub x_seam: Option<i32>,
   pub y_seam: Option<i32>,
@@ -58,6 +75,37 @@ pub trait ControllableEntity: Entity {
 }
 
 
+pub mod system {
+  use super::*;
+
+  pub fn apply_vel(pos: &mut Pos, vel: &Vel) {
+    pos.0 = pos.0 + vel.0;
+  }
+
+  pub fn apply_acc(vel: &mut Vel, acc: &Acc) {
+    vel.0 = vel.0 + acc.0;
+  }
+
+  pub fn print_pos(en: &EcsEntity, pos: &Pos) {
+    agb::println!("{:?}: {:?}", en, pos.0);
+  }
+
+  pub fn physics_process(pos: &Pos, vel: &mut Vel, size: &Size, col_layer: &CollisionLayer, on_ground: Option<&mut OnGround>, tilemap: &CollideTilemap) {
+    let hitbox = Rect::new(pos.0, size.0);
+    let col = tilemap.get_collision_seams(vel.0, hitbox, *col_layer);
+    let new_vel = move_and_collide(vel.0, hitbox, &col);
+
+    if vel.0.y > new_vel.y {
+      if let Some(on_ground) = on_ground {
+        on_ground.0 = true;
+      }
+    }
+
+    vel.0 = new_vel;
+  }
+}
+
+
 fn move_and_collide(movement: Vector2D<PosNum>, hitbox: Rect<PosNum>, col: &Collision) -> Vector2D<PosNum> {
   let mut actual = movement.clone();
   if let Some(x_collision) = col.x_seam {
@@ -86,7 +134,7 @@ fn move_and_collide(movement: Vector2D<PosNum>, hitbox: Rect<PosNum>, col: &Coll
 
 
 impl CollideTilemap {
-  const PX_PER_TILE: PosNum = const_num_i32(16,0);
+  const PX_PER_TILE: PosNum = const_num_i32(16, 0);
 
   fn get_collision_seams(&self, movement: Vector2D<PosNum>, hitbox: Rect<PosNum>, layer: CollisionLayer) -> Collision {
     let moving_left = movement.x < ZERO;
@@ -149,17 +197,17 @@ impl CollideTilemap {
                   snap_to_ground = specialized_col.snap_to_ground;
                   (x_seam, y_seam) = Self::handle_specialized_collide(specialized_col, x_seam, y_seam, moving_left, moving_up);
                 }
-              },
+              }
               (true, false) => {
                 if tile.is_slope() {
                   let specialized_col = tile.specialized_collide((xi, yi).into(), adjusted_hitbox, moving_left, moving_up);
                   snap_to_ground = specialized_col.snap_to_ground;
                   (x_seam, y_seam) = Self::handle_specialized_collide(specialized_col, x_seam, y_seam, moving_left, moving_up);
                 } else {
-                  let new_seam = if moving_left { (xi + 1)  * 16 } else { xi * 16 };
+                  let new_seam = if moving_left { (xi + 1) * 16 } else { xi * 16 };
                   x_seam = Some(Self::stricter_seam(x_seam, new_seam, moving_left));
                 }
-              },
+              }
               (false, true) => {
                 if tile.is_slope() {
                   let specialized_col = tile.specialized_collide((xi, yi).into(), adjusted_hitbox, moving_left, moving_up);
@@ -169,10 +217,10 @@ impl CollideTilemap {
                   let new_seam = if moving_up { (yi + 1) * 16 } else { yi * 16 };
                   y_seam = Some(Self::stricter_seam(y_seam, new_seam, moving_up));
                 }
-              },
+              }
               (true, true) => {
-                corner_y_seam = Some(if moving_up { (yi + 1)  * 16 } else { yi * 16 });
-              },
+                corner_y_seam = Some(if moving_up { (yi + 1) * 16 } else { yi * 16 });
+              }
             }
           }
         }
@@ -183,7 +231,7 @@ impl CollideTilemap {
       y_seam = corner_y_seam;
     }
 
-    Collision {x_seam, y_seam, snap_to_ground}
+    Collision { x_seam, y_seam, snap_to_ground }
   }
 
   fn stricter_seam(cur: Option<i32>, new: i32, moving_negative: bool) -> i32 {
@@ -242,34 +290,34 @@ impl CollideTileType {
         let pos = Vector2D::new(PosNum::new(pos.x * 16), PosNum::new(pos.y * 16));
         let self_rect = Rect::new(pos, (2, 16).into());
         adjusted_hitbox.touches(self_rect)
-      },
+      }
       Self::RWall => {
         let pos = Vector2D::new(PosNum::new(pos.x * 16 + 14), PosNum::new(pos.y * 16));
         let self_rect = Rect::new(pos, (2, 16).into());
         adjusted_hitbox.touches(self_rect)
-      },
+      }
 
       Self::RSteepSlope => {
         let relative_hitbox = Rect::new(adjusted_hitbox.position - (pos * 16).into(), adjusted_hitbox.size);
         let corner = Vector2D::new(relative_hitbox.position.x + relative_hitbox.size.x, relative_hitbox.position.y + relative_hitbox.size.y);
-        corner.y > const_num_i32(16,0) - corner.x
-      },
+        corner.y > const_num_i32(16, 0) - corner.x
+      }
       Self::LSteepSlope => {
         let relative_hitbox = Rect::new(adjusted_hitbox.position - (pos * 16).into(), adjusted_hitbox.size);
         let corner = Vector2D::new(relative_hitbox.position.x, relative_hitbox.position.y + relative_hitbox.size.y);
         corner.y > corner.x
-      },
+      }
 
       Self::RLowSlope1 => {
         let relative_hitbox = Rect::new(adjusted_hitbox.position - (pos * 16).into(), adjusted_hitbox.size);
         let corner = Vector2D::new(relative_hitbox.position.x + relative_hitbox.size.x, relative_hitbox.position.y + relative_hitbox.size.y);
-        corner.y > const_num_i32(16,0) - (corner.x / const_num_i32(2,0))
-      },
+        corner.y > const_num_i32(16, 0) - (corner.x / const_num_i32(2, 0))
+      }
       Self::RLowSlope2 => {
         let relative_hitbox = Rect::new(adjusted_hitbox.position - (pos * 16).into(), adjusted_hitbox.size);
         let corner = Vector2D::new(relative_hitbox.position.x + relative_hitbox.size.x, relative_hitbox.position.y + relative_hitbox.size.y);
-        corner.y > const_num_i32(8,0) - (corner.x / const_num_i32(2,0))
-      },
+        corner.y > const_num_i32(8, 0) - (corner.x / const_num_i32(2, 0))
+      }
 
       Self::LLowSlope1 => true,
       Self::LLowSlope2 => true,
@@ -281,12 +329,12 @@ impl CollideTileType {
   fn specialized_collide(self, pos: Vector2D<i32>, adjusted_hitbox: Rect<PosNum>, moving_left: bool, _moving_up: bool) -> Collision {
     match self {
       Self::LWall => Collision {
-        x_seam: Some(if moving_left {pos.x * 16 + 2} else {pos.x * 16}),
+        x_seam: Some(if moving_left { pos.x * 16 + 2 } else { pos.x * 16 }),
         y_seam: None,
         snap_to_ground: false,
       },
       Self::RWall => Collision {
-        x_seam: Some(if moving_left {(pos.x + 1) * 16} else {(pos.x + 1) * 16 - 2}),
+        x_seam: Some(if moving_left { (pos.x + 1) * 16 } else { (pos.x + 1) * 16 - 2 }),
         y_seam: None,
         snap_to_ground: false,
       },
@@ -298,7 +346,7 @@ impl CollideTileType {
           y_seam: Some(16 * pos.y + (16 - (relative_hitbox.position.x + relative_hitbox.size.x).trunc())),
           snap_to_ground: true,
         }
-      },
+      }
       Self::LSteepSlope => {
         let relative_hitbox = Rect::new(adjusted_hitbox.position - (pos * 16).into(), adjusted_hitbox.size);
         Collision {
@@ -306,7 +354,7 @@ impl CollideTileType {
           y_seam: Some(16 * pos.y + relative_hitbox.position.x.trunc()),
           snap_to_ground: true,
         }
-      },
+      }
 
       Self::RLowSlope1 => {
         let relative_hitbox = Rect::new(adjusted_hitbox.position - (pos * 16).into(), adjusted_hitbox.size);
@@ -315,7 +363,7 @@ impl CollideTileType {
           y_seam: Some(16 * pos.y + (16 - (relative_hitbox.position.x + relative_hitbox.size.x).trunc() / 2)),
           snap_to_ground: true,
         }
-      },
+      }
       Self::RLowSlope2 => {
         let relative_hitbox = Rect::new(adjusted_hitbox.position - (pos * 16).into(), adjusted_hitbox.size);
         Collision {
@@ -323,9 +371,9 @@ impl CollideTileType {
           y_seam: Some(16 * pos.y + (8 - (relative_hitbox.position.x + relative_hitbox.size.x).trunc() / 2)),
           snap_to_ground: true,
         }
-      },
+      }
 
-      _ => Collision{ x_seam: None, y_seam: None, snap_to_ground: false }
+      _ => Collision { x_seam: None, y_seam: None, snap_to_ground: false }
     }
   }
 }

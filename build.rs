@@ -165,7 +165,7 @@ mod tiled_export {
                   "Background" => {
                     has_background = true;
                     "BACKGROUND_DATA"
-                  },
+                  }
                   "Foreground" => {
                     has_foreground = true;
                     "FOREGROUND_DATA"
@@ -181,12 +181,12 @@ mod tiled_export {
                 }
                 writeln!(&mut writer, "];")?;
               }
-            },
+            }
             _ => {
               panic!("Infinite tile layers not supported!");
             }
           }
-        },
+        }
         LayerType::Objects(obj_layer) => {
           write!(&mut writer, "const OBJECTS: &[O] = &[")?;
           for obj in obj_layer.objects() {
@@ -197,25 +197,23 @@ mod tiled_export {
             writeln!(&mut writer, "];")?;
 
             writeln!(&mut writer, r#"
-                  pub fn objects() -> Vec<GameObject> {{
+                  pub fn load_objects(world: &mut World) -> Vec<Entity> {{
                     let mut object_vec = vec![];
                     for object in OBJECTS {{
-                      object_vec.push(object.build());
+                      object_vec.push(object.build(world));
                     }}
                     object_vec
                   }}
                 "#)?;
           }
-        },
-        _ => {
-
-        },
+        }
+        _ => {}
       }
     }
 
     let map_w = map.width;
-    let background_data = if has_background {"Some(&BACKGROUND_DATA)"} else {"None"};
-    let foreground_data = if has_foreground {"Some(&FOREGROUND_DATA)"} else {"None"};
+    let background_data = if has_background { "Some(&BACKGROUND_DATA)" } else { "None" };
+    let foreground_data = if has_foreground { "Some(&FOREGROUND_DATA)" } else { "None" };
     writeln!(
       &mut writer,
       r#"
@@ -223,9 +221,11 @@ mod tiled_export {
       use agb_ext::{{
         tiles::{{Tilemap, FlipTile}},
         collision::CollideTileType as C,
+        ecs::Entity,
       }};
       use crate::tileset;
-      use crate::object::{{ObjectInit as O, GameObject}};
+      use crate::world::{{World}};
+      use crate::object::{{ObjectInit as O}};
 
       pub static TILEMAP: Tilemap = Tilemap::new(&DATA, {background_data}, {foreground_data}, &COLLISION, {map_w}, &tileset::TILESET_DATA);
 
@@ -270,7 +270,7 @@ mod tiled_export {
 
   fn rect_object(obj: &tiled::ObjectData) -> String {
     let (width, height) = {
-      if let ObjectShape::Rect{width, height} = obj.shape {
+      if let ObjectShape::Rect { width, height } = obj.shape {
         (width, height)
       } else {
         panic!("Object of type {} must be a Rect", obj.user_type)
