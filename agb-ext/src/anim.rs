@@ -26,7 +26,7 @@ pub struct AnimPlayer<'o> {
   frame_idx: usize,
   frame_duration: u8,
 
-  sprite: Object<'o>
+  sprite: Object<'o>,
 }
 
 #[macro_export]

@@ -15,7 +15,7 @@ use agb_ext::collision::{CollideTilemap, CollisionLayer};
 use agb_ext::tiles::Tilemap;
 use crate::{
   player::{PlayerType, CurrentPlayer, system as playersys},
-  object::{ForegroundHide, system as objsys}
+  object::{ForegroundHide, system as objsys},
 };
 
 pub type Map<T> = HashMap<Entity, T>;
@@ -32,14 +32,14 @@ pub struct World<'o> {
 impl<'o> World<'o> {
   pub fn new() -> Self {
     World {
-      components: (Map::new(),Map::new(),Map::new(),Map::new(),Map::new(),Map::new(),Map::new(),Map::new(),Map::new(),Map::new(),),
+      components: (Map::new(), Map::new(), Map::new(), Map::new(), Map::new(), Map::new(), Map::new(), Map::new(), Map::new(), Map::new(), ),
       entities: Map::new(),
       next_entity_id: 0,
     }
   }
 
   pub fn build_entity<'w>(&'w mut self) -> MutEntityData<'w, 'o> {
-    let en = Entity{ id: self.next_entity_id };
+    let en = Entity { id: self.next_entity_id };
     self.next_entity_id += 1;
     self.entities.insert(en, ());
     MutEntityData {
@@ -51,14 +51,14 @@ impl<'o> World<'o> {
   pub fn entity_data<'w>(&'w self, en: Entity) -> EntityData<'w, 'o> {
     EntityData {
       world: self,
-      en
+      en,
     }
   }
 
   pub fn entity_data_mut<'w>(&'w mut self, en: Entity) -> MutEntityData<'w, 'o> {
     MutEntityData {
       world: self,
-      en
+      en,
     }
   }
 
@@ -75,7 +75,7 @@ impl<'o> World<'o> {
         }
       }
       if let (Some(pos), Some(size), Some(col_layer)) =
-          (pos, size, self.components.5.get(en)) {
+      (pos, size, self.components.5.get(en)) {
         colsys::physics_process(pos, vel, size, col_layer, self.components.4.get_mut(en), &collide_tilemap);
       }
     }

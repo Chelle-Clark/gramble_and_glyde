@@ -12,7 +12,7 @@ use agb_ext::{
   camera::Camera,
   collision::{Entity, ControllableEntity, CollisionLayer, Acc, OnGround, Pos, Size, Vel},
   ecs::Entity as EcsEntity,
-  anim_enum
+  anim_enum,
 };
 use crate::world::{World, MutEntityAccessor, HasEntity};
 
@@ -46,6 +46,7 @@ mod gramble_sprites {
 
   pub mod pipe {
     use super::*;
+
     static GRAPHICS: &Graphics = agb::include_aseprite!("gfx/gramble_pipe.aseprite");
     static IDLE: &Tag = GRAPHICS.tags().get("Idle");
 
@@ -67,12 +68,12 @@ pub struct GramblePipe<'obj> {
   position: Vector2D<PosNum>,
 }
 
-const GRAVITY: PosNum = const_num_i32(0,1);
-const ACCELERATION: PosNum = const_num_i32(0,2);
-const GRAMBLE_MAX_VEL: PosNum = const_num_i32(3,0);
-const GLYDE_MAX_VEL: PosNum = const_num_i32(2,5);
-const GRAMBLE_MAX_HEIGHT: PosNum = const_num_i32(35,0);
-const GLYDE_MAX_HEIGHT: PosNum = const_num_i32(19,5);
+const GRAVITY: PosNum = const_num_i32(0, 1);
+const ACCELERATION: PosNum = const_num_i32(0, 2);
+const GRAMBLE_MAX_VEL: PosNum = const_num_i32(3, 0);
+const GLYDE_MAX_VEL: PosNum = const_num_i32(2, 5);
+const GRAMBLE_MAX_HEIGHT: PosNum = const_num_i32(35, 0);
+const GLYDE_MAX_HEIGHT: PosNum = const_num_i32(19, 5);
 
 fn jump_impulse(max_height: PosNum) -> PosNum {
   (PosNum::new(2) * GRAVITY * max_height).sqrt()
@@ -117,10 +118,10 @@ pub mod system {
       match tri {
         Tri::Negative => {
           anim.sprite_mut().set_hflip(true);
-        },
+        }
         Tri::Positive => {
           anim.sprite_mut().set_hflip(false);
-        },
+        }
         _ => {}
       };
       if anim.cur_anim() != AnimEnum::Run.into() {
@@ -154,11 +155,11 @@ pub mod system {
         vel.x += ACCELERATION;
         vel.x = vel.x.clamp(-max_velocity, desired_x_vel);
       }
-      if vel.x.abs() < const_num_i32(0,5) {
+      if vel.x.abs() < const_num_i32(0, 5) {
         match tri {
           Tri::Zero => vel.x = 0.into(),
-          Tri::Positive => vel.x = const_num_i32(0,5),
-          Tri::Negative => vel.x = -const_num_i32(0,5),
+          Tri::Positive => vel.x = const_num_i32(0, 5),
+          Tri::Negative => vel.x = -const_num_i32(0, 5),
         }
       }
 
@@ -170,11 +171,11 @@ pub mod system {
           };
           vel.y = -jump_impulse;
         } else if input.is_released(Button::B) {
-          vel.y += GRAVITY * const_num_i32(0,75);
+          vel.y += GRAVITY * const_num_i32(0, 75);
         }
       }
 
-      let tile_size = const_num_i32(16,0);
+      let tile_size = const_num_i32(16, 0);
       vel.x = vel.x.clamp(-tile_size, tile_size);
       vel.y = vel.y.clamp(-tile_size, tile_size);
       vel
@@ -182,7 +183,7 @@ pub mod system {
   }
 
   pub fn center_camera(_: &CurrentPlayer, pos: &Pos, size: &Size, camera: &mut Camera) {
-    camera.smoothed_center_on(pos.0 + (size.0 / const_num_i32(2,0)));
+    camera.smoothed_center_on(pos.0 + (size.0 / const_num_i32(2, 0)));
   }
 }
 
@@ -191,7 +192,7 @@ impl<'obj> GramblePipe<'obj> {
   pub fn new(object: &'obj OamManaged, position: Vector2D<PosNum>) -> Self {
     Self {
       anim: AnimPlayer::new(object, gramble_sprites::pipe::get_next_anim, AnimEnum::Idle.into()),
-      position
+      position,
     }
   }
 
@@ -210,7 +211,7 @@ impl<'obj> GramblePipe<'obj> {
   }
 }
 
-const PIPE_MOVE_SPEED: PosNum = const_num_i32(3,5);
+const PIPE_MOVE_SPEED: PosNum = const_num_i32(3, 5);
 
 impl<'obj> Entity for GramblePipe<'obj> {
   fn move_by(&mut self, offset: Vector2D<PosNum>, _snap_to_ground: bool) {

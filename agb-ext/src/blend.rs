@@ -4,6 +4,7 @@ use agb::{
 };
 
 type OpacityNum = Num<u8, 4>;
+
 mod opacity_num {
   use super::OpacityNum;
 

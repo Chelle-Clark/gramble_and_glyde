@@ -165,7 +165,7 @@ mod tiled_export {
                   "Background" => {
                     has_background = true;
                     "BACKGROUND_DATA"
-                  },
+                  }
                   "Foreground" => {
                     has_foreground = true;
                     "FOREGROUND_DATA"
@@ -181,12 +181,12 @@ mod tiled_export {
                 }
                 writeln!(&mut writer, "];")?;
               }
-            },
+            }
             _ => {
               panic!("Infinite tile layers not supported!");
             }
           }
-        },
+        }
         LayerType::Objects(obj_layer) => {
           write!(&mut writer, "const OBJECTS: &[O] = &[")?;
           for obj in obj_layer.objects() {
@@ -206,16 +206,14 @@ mod tiled_export {
                   }}
                 "#)?;
           }
-        },
-        _ => {
-
-        },
+        }
+        _ => {}
       }
     }
 
     let map_w = map.width;
-    let background_data = if has_background {"Some(&BACKGROUND_DATA)"} else {"None"};
-    let foreground_data = if has_foreground {"Some(&FOREGROUND_DATA)"} else {"None"};
+    let background_data = if has_background { "Some(&BACKGROUND_DATA)" } else { "None" };
+    let foreground_data = if has_foreground { "Some(&FOREGROUND_DATA)" } else { "None" };
     writeln!(
       &mut writer,
       r#"
@@ -272,7 +270,7 @@ mod tiled_export {
 
   fn rect_object(obj: &tiled::ObjectData) -> String {
     let (width, height) = {
-      if let ObjectShape::Rect{width, height} = obj.shape {
+      if let ObjectShape::Rect { width, height } = obj.shape {
         (width, height)
       } else {
         panic!("Object of type {} must be a Rect", obj.user_type)
