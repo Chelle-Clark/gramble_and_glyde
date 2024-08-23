@@ -1,12 +1,11 @@
 use agb::display::blend::Blend;
 use agb::display::object::OamManaged;
 use agb::display::tiled::VRamManager;
-use agb::hash_map::HashMap;
 use agb::input::ButtonController;
 use agb::sound::mixer::Mixer;
 use agb_ext::{
   collision::{Pos, Vel, Acc, OnGround, Size, system as colsys},
-  ecs::{Entity},
+  ecs::{Entity, Entities, Map, EntityAccessor, MutEntityAccessor, HasEntity},
   anim::{AnimOffset, AnimPlayer, system as anisys},
 };
 use agb_ext::blend::ManagedBlend;
@@ -17,9 +16,6 @@ use crate::{
   player::{PlayerType, CurrentPlayer, system as playersys},
   object::{ForegroundHide, system as objsys},
 };
-
-pub type Map<T> = HashMap<Entity, T>;
-type Entities = Map<()>;
 
 type Components<'o> = (Map<Pos>, Map<Vel>, Map<Acc>, Map<Size>, Map<OnGround>, Map<CollisionLayer>, Map<PlayerType>, Map<AnimPlayer<'o>>, Map<AnimOffset>, Map<ForegroundHide>);
 
@@ -99,39 +95,6 @@ impl<'o> World<'o> {
   }
 }
 
-
-pub trait HasEntity {
-  fn entity(&self) -> Entity;
-}
-
-pub trait EntityAccessor<T>: HasEntity + Sized {
-  fn component(&self) -> &Map<T>;
-
-  fn get(&self) -> Option<&T> {
-    self.component().get(&self.entity())
-  }
-}
-
-pub trait MutEntityAccessor<T>: HasEntity + Sized {
-  fn component_mut(&mut self) -> &mut Map<T>;
-
-  fn set(&mut self, val: T) -> &mut Self {
-    let en = self.entity();
-    let mut component = self.component_mut();
-    component.insert(en, val);
-    self
-  }
-
-  fn get_mut(&mut self) -> Option<&mut T> {
-    let en = self.entity().clone();
-    self.component_mut().get_mut(&en)
-  }
-
-  fn remove(&mut self) -> Option<T> {
-    let en = self.entity().clone();
-    self.component_mut().remove(&en)
-  }
-}
 
 pub struct EntityData<'w, 'o> {
   world: &'w World<'o>,

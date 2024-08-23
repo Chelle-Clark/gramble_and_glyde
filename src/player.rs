@@ -11,10 +11,10 @@ use agb_ext::{
   anim::{AnimPlayer, AnimOffset},
   camera::Camera,
   collision::{Entity, ControllableEntity, CollisionLayer, Acc, OnGround, Pos, Size, Vel},
-  ecs::Entity as EcsEntity,
+  ecs::{Entity as EcsEntity, MutEntityAccessor, HasEntity},
   anim_enum,
 };
-use crate::world::{World, MutEntityAccessor, HasEntity};
+use crate::world::{World};
 
 anim_enum!(AnimEnum {
   Idle => 0,

@@ -6,10 +6,9 @@ use agb_ext::{
   math::PosNum,
 };
 use agb_ext::collision::{Pos, Size};
-use agb_ext::ecs::Entity;
+use agb_ext::ecs::{Entity, HasEntity, MutEntityAccessor, Map};
 use agb_ext::math::ZERO;
-use crate::{HasEntity, MutEntityAccessor, Vector2D, World};
-use crate::world::Map;
+use crate::{Vector2D, World};
 
 #[derive(Copy, Clone)]
 pub enum ObjectInit {

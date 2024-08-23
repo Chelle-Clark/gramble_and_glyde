@@ -27,10 +27,11 @@ use agb_ext::{
   math::PosNum,
   camera::Camera,
   collision::{ControllableEntity, Entity, Pos, Vel, Acc},
+  ecs::{MutEntityAccessor, HasEntity}
 };
 use agb_ext::blend::ManagedBlend;
 use crate::player::{gramble};
-use crate::world::{World, MutEntityAccessor, HasEntity};
+use crate::world::{World};
 
 pub mod tileset {
   include!(concat!(env!("OUT_DIR"), "/tileset.rs"));
